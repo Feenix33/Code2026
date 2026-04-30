@@ -1,0 +1,30 @@
+This is a test input file for the demo program.
+Line 2
+Line 3
+line 4
+line 5
+line 6
+line 7
+line 8
+line 9
+line 10
+Second time through
+B Line 2
+B Line 3
+B line 4
+B line 5
+B line 6
+B line 7
+B line 8
+B line 9
+B line 10
+Third time through
+C Line 2
+C Line 3
+C line 4
+C line 5
+C line 6
+C line 7
+C line 8
+C line 9
+C line 10

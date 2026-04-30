@@ -1,0 +1,14 @@
+.layout 8
+.title Bean Dinners
+.titlepage true
+.cleaner
+.scrubber
+.fold false
+.frames true
+.separator false
+.margin 0.15
+.file Food/CreamyWhiteBeans.txt
+.np
+.file Food/rPuertoBeans.txt
+.np
+.file Food/SweetPotatoBlackBeans.txt
