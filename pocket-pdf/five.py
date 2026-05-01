@@ -50,6 +50,7 @@ TODO
 """
 
 import argparse
+import sys
 import os
 from reportlab.lib.pagesizes import A4, landscape, letter, portrait
 from reportlab.lib import colors
@@ -217,20 +218,30 @@ class Booklet:
         self.canvas.rotate(180)
         self.canvas.translate(-self.docSize[0]/2, -self.docSize[1]/2)
 
-    def processFile(self, inputFilename):
+    def makeBooklet(self, inputFilename):
+        self.processFile(inputFilename)
+        self.build()
+        
+    def processFile(self, inputFilename, isRecipe=False):
         # Process the input file content and generate the output PDF.
         #print(f"Processing input file '{inputFilename}'...")
         try:
             with open(inputFilename, 'r', encoding='latin-1') as f:
                 #print (f"Input file '{inputFilename}' opened successfully. Reading content...")
+                firstLine = True
                 for line in f:
                     line = line.strip()
                     if self.canvas is None:
                          # Process configuration commands in the header before creating the canvas
                          self.processHeaderLine(line)
                     else:
-                        # process content lines and commands
-                         self.processContentLine(line)
+                        if firstLine and isRecipe:
+                            self.handleCommand(".font align=center")
+                            line = "<b>"+line+"</b>" # make the first line bold if it's a recipe
+                        self.processContentLine(line)
+                        if firstLine:
+                            self.handleCommand(".font align=left") # reset to left align after the title line
+                            firstLine = False
             #print(f"Input file '{inputFilename}' processed successfully.")
         except FileNotFoundError:
             print(f"Error: Input file '{inputFilename}' not found.")
@@ -308,10 +319,10 @@ class Booklet:
     def processContentLine(self, line):
         # Process content lines and commands after the header has been processed
         if line.startswith('.'):
-             self.handleCommand(line)
+            self.handleCommand(line)
         else:
-             self.handleContent(line)
-
+            self.handleContent(line)
+ 
     def alignmentStrToEnum(self, alignstr):
         match alignstr.lower():
             case 'left':
@@ -359,6 +370,9 @@ class Booklet:
         elif line.startswith(".file"):
             tokens = line.split()
             self.processFile(tokens[1])
+        elif line.startswith(".recipe"):
+            tokens = line.split()
+            self.processFile(tokens[1], isRecipe=True)
         else:
             print(f"Unknown command: '{line}'")
 
@@ -388,6 +402,9 @@ class Booklet:
         return result
 
     def handleContent(self, line):
+        if len(line) == 0:
+            self.addObject(Spacer(1, self.currentStyle.fontSize)) # add a spacer for empty lines
+            return
         if self.cleaner:
             line = line.replace('½', '1/2').replace('¼', '1/4').replace('¾', '3/4').replace('°', ' deg')
         if self.scrubber:
@@ -426,44 +443,80 @@ class Booklet:
 
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
-def parse_arguments():
+def ProcessArguments(args):
     """
-    Parse command line arguments for input and output files.
+    Parse command line arguments and return input and output filenames.
+    
+    Args:
+        args: list of command line arguments (typically sys.argv[1:])
+        
+    Returns:
+        tuple: (inFilename, outFilename)
+        
+    Behavior:
+        - Default: inFilename="input.txt", outFilename="output.pdf"
+        - Supports positional arguments: program input.txt output.pdf
+        - Supports flags: program -i input.txt -o output.pdf
+        - Output filename must end in .pdf
+        - If output not specified, uses input filename with truncated extension + .pdf
     """
-    parser = argparse.ArgumentParser(description='Demo program that processes input and output files.')
-    parser.add_argument('-i', '--input', default='input.txt', help='Input file name (default: input.txt)')
-    parser.add_argument('-o', '--output', help='Output file name (must have .pdf extension)')
-
-    args = parser.parse_args()
-
-    # Determine output file name
-    if args.output is None:
-        # If output not provided, use input file name with .pdf extension
-        base_name = os.path.splitext(args.input)[0]
-        outputFilename = base_name + '.pdf'
-    else:
-        # Ensure output file has .pdf extension
-        if not args.output.endswith('.pdf'):
-            outputFilename = args.output + '.pdf'
+    inFilename = "input.txt"
+    outFilename = None
+    output_explicitly_set = False
+    
+    i = 0
+    while i < len(args):
+        if args[i] == "-i" and i + 1 < len(args):
+            # Flag: -i for input filename
+            inFilename = args[i + 1]
+            i += 2
+        elif args[i] == "-o" and i + 1 < len(args):
+            # Flag: -o for output filename
+            outFilename = args[i + 1]
+            output_explicitly_set = True
+            i += 2
+        elif not args[i].startswith("-"):
+            # Positional arguments
+            if inFilename == "input.txt" and not output_explicitly_set:
+                # First positional arg is input
+                inFilename = args[i]
+            elif outFilename is None:
+                # Second positional arg is output
+                outFilename = args[i]
+                output_explicitly_set = True
+            i += 1
         else:
-            outputFilename = args.output
+            # Unknown flag, skip
+            i += 1
+    
+    # If no output filename specified, derive it from input filename or use default
+    if outFilename is None:
+        # If input wasn't changed from default, use default output
+        if inFilename == "input.txt":
+            outFilename = "output.pdf"
+        else:
+            # Remove extension from input and add .pdf
+            name_without_ext = os.path.splitext(inFilename)[0]
+            outFilename = name_without_ext + ".pdf"
+    else:
+        # Ensure output filename ends with .pdf
+        if not outFilename.lower().endswith(".pdf"):
+            outFilename += ".pdf"
+    
+    return inFilename, outFilename
 
-    return args.input, outputFilename
 
 def main():
 
-    """
-    Read command line arguments
-    """
-    inputFilename, outputFilename = parse_arguments()
+    #Read command line arguments
+    inputFilename, outputFilename = ProcessArguments(sys.argv[1:])
 
     print(f"Converting: {inputFilename} to {outputFilename}")
 
-    #print ("Starting booklet generation...")
     booklet = Booklet(nameOut=outputFilename)
-    #print (f"Booklet instance created. Processing input file '{inputFilename}'...")
-    booklet.processFile(inputFilename)
-    booklet.build()
+    booklet.makeBooklet(inputFilename)
+    #booklet.processFile(inputFilename)
+    #booklet.build()
 
 if __name__ == '__main__':
     main()
