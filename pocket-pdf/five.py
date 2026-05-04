@@ -20,7 +20,7 @@ COMMANDS
 .file       Read in a file and process it, ignore config in the file 
 
 CONFIG
-.layout #   Layout is 1,2,4,8 page
+.layout #   Layout is 1,2,3,4,8 page
 .frames     Show frames
 .fold       Show folds 
 .margin #   Size of margins
@@ -42,11 +42,12 @@ FONT PARAMETERS
             spaceAfter=None,
             leading=None):
 
-TODO
-- Check on redefining frames given this prototype:
+NOTES:
+- The padding is between the border and the text in the prototype:
     Frame(x1, y1, width,height, leftPadding=6, bottomPadding=6, rightPadding=6, topPadding=6, id=None, showBoundary=0)
-- 2 page layout needs to swap frames page by page
 
+TODO:
+- title image support: simple or background
 """
 
 import argparse
@@ -58,7 +59,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 import reportlab.lib.enums 
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import Frame, Spacer, Paragraph, PageBreak
+from reportlab.platypus import Frame, Spacer, Paragraph, PageBreak, Image
+import PIL
 
 class Booklet: 
     """ The render engine for the pocket book maker
@@ -90,6 +92,7 @@ class Booklet:
         if self.fontSize == None:
             if self.layout == 1: self.fontSize = 12
             elif self.layout == 2: self.fontSize = 11
+            elif self.layout == 3: self.fontSize = 11
             elif self.layout == 4: self.fontSize = 10
             elif self.layout == 8: self.fontSize = 8
         self.frames, self.frameRotate = self.defineFrames()
@@ -103,19 +106,21 @@ class Booklet:
         if self.drawFolds: self.drawFoldlines() #self.canvas)
 
     def defineFrames(self):
-        # Define frames for the 4-page layout
         width, height = self.docSize
         if self.layout == 1:
             frames = [Frame(self.margin, self.margin, width - 2*self.margin, height - 2*self.margin, id='frame1')]
             rotate = [False]
         elif self.layout == 2:
-            #frames = [ #margins are probably off slightly
-            #    Frame(self.margin, self.margin, (width-2*self.margin) / 2, height - 2*self.margin, id='frame1'),  # Page 1
-            #    Frame(self.margin + (width-2*self.margin) / 2, self.margin, (width-2*self.margin) / 2, height - 2*self.margin, id='frame2')   # Page 2
-            #]
             frames = [
                 Frame(self.margin + (width/2), self.margin, (width-4*self.margin) / 2, height - 2*self.margin, id='frame2'),   # Page 2
                 Frame(self.margin, self.margin, (width-4*self.margin) / 2, height - 2*self.margin, id='frame1')  # Page 1
+            ]
+            rotate = [False, False]
+        elif self.layout == 3:
+            # alternate 2 page layout
+            frames = [
+                Frame(self.margin, self.margin, (width-4*self.margin) / 2, height - 2*self.margin, id='frame1'),  # Page 1
+                Frame(self.margin + (width/2), self.margin, (width-4*self.margin) / 2, height - 2*self.margin, id='frame2'),   # Page 2
             ]
             rotate = [False, False]
         elif self.layout == 4:  
@@ -123,15 +128,7 @@ class Booklet:
             #  4  1
             fw = width/2 - self.margin*2
             fh = height/2 - self.margin*2
-            """
-            frames = [
-                Frame (fw + self.margin, fh + self.margin, fw, fh, id = 'frame1'),   # Page 1
-                Frame (fw + self.margin, self.margin, fw, fh, id = 'frame2'),  # Page 2
-                Frame (self.margin, self.margin, fw, fh, id = 'frame3'),  # Page 3
-                Frame (self.margin, fh + self.margin, fw, fh, id = 'frame4')  # Page 4
-            ]
-            #rotate =  [False, True, False, True]
-            """
+            #     Frame(x1, y1, width,height, leftPadding=6, bottomPadding=6, rightPadding=6, topPadding=6, id=None, showBoundary=0)
             frames = [
                 Frame (3*self.margin+fw, self.margin, fw, fh, id = 'frame1'),  # Page 1
                 Frame (self.margin, self.margin, fw, fh, id = 'frame2'),  # Page 2
@@ -161,7 +158,7 @@ class Booklet:
             frames = [f1, f2, f3, f4, f5, f6, f7, f0]
             rotate = [False, False, False, True, False, False, False, True]
         else:
-            raise ValueError("Invalid layout value. Supported values are 1, 2, 4, or 8.")
+            raise ValueError("Invalid layout value. Supported values are 1, 2, 3, 4, or 8.")
 
         return frames, rotate
 
@@ -199,7 +196,7 @@ class Booklet:
         self.canvas.saveState()
         self.canvas.setDash(1,5) # on off
 
-        if self.layout == 2:
+        if self.layout == 2 or self.layout == 3:
             self.canvas.setStrokeColor('red')
             self.canvas.line(self.docSize[0]/2, 0, self.docSize[0]/2, self.docSize[1])
         elif self.layout == 4:
@@ -248,6 +245,20 @@ class Booklet:
         except Exception as e:
             print(f"Error: {e}")
     
+    def processImage(self, filename):
+        image = PIL.Image.open(filename[0])
+        # adjust size to fit in frame and maintain aspect ratio
+        iw, ih = image.size
+        imgRatio = iw/ih # aspect ratio of the image
+        frmRatio = self.currentFrame._width / self.currentFrame._height # aspect ratio of the frame
+        if imgRatio < frmRatio:
+            ph = self.currentFrame._height / inch
+            pw = (ph*iw)/ih
+        else:
+            pw = self.currentFrame._width / inch    
+            ph = (pw*ih)/iw
+        self.addObject(Image(filename[0], width=pw*inch, height=ph*inch))
+
     def processHeaderLine(self, line):
         #print (f"Processing header line: '{line}'")
         # Process configuration commands in the header before creating the canvas
@@ -373,6 +384,9 @@ class Booklet:
         elif line.startswith(".recipe"):
             tokens = line.split()
             self.processFile(tokens[1], isRecipe=True)
+        elif line.startswith(".image"):
+            tokens = line.split()
+            self.processImage(tokens[1:])
         else:
             print(f"Unknown command: '{line}'")
 
@@ -383,8 +397,6 @@ class Booklet:
         Args: line (str): The text line to process
         Returns: str: The scrubbed text with all replacements made
         """
-        # Data structure: list of tuples with (original_string, replacement_string)
-        # Strings can contain spaces
         replacements = [
             ("teaspoon", "tsp"), ("tablespoon", "Tbl"), ("Tablespoon", "Tbl"), ("tbsp", "Tbl"),
             ("Tbsp", "Tbl"), ("Tbl of ", "Tbl "), ("tsp of ", "tsp "), ("cup", "c"),
@@ -393,7 +405,6 @@ class Booklet:
             ("minutes", "min"), ("pound", "lb"), ("cups", "c"), ("Bake for ", "Bake "),
             ("bake for ", "bake "), ("degrees", "deg"), ("Preheat oven to ", "Oven "),
             ("deg F", "F"), ("deg C", "C"), ("Cool for ", "Cool "), 
-            # Add more pairs as needed
         ]
         result = line
         for original, replacement in replacements:
@@ -414,13 +425,12 @@ class Booklet:
 
     def addObject(self, obj, spacer=False):
         #TODO if obj is continuously too large need to punch out
-        #TODO if spacer don't put if we moved to a new column
+        #TODO if spacer don't put if we moved to a new frame
         if self.currentFrame.add(obj, self.canvas) == 0: # won't handle a giant paragraph
             self.frameN += 1
             if self.frameN >= len(self.frames):
                 self.frameN = 0
                 self.canvas.showPage()
-                #TODO do we need this line?
                 self.frames, self.frameRotate = self.defineFrames()
                 if self.drawFolds: self.drawFoldlines() #self.canvas)
             self.currentFrame = self.frames[self.frameN]

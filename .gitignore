@@ -1,0 +1,4 @@
+tt*.py
+*.txt
+assets
+*/archive/*
