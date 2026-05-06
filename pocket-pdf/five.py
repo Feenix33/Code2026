@@ -27,6 +27,8 @@ CONFIG
 .separator  Separator/spacer after every paragraph
 .cleaner    Remove fractions and degree symbol    
 .scrubber   Shortens some recipe words
+.version    Version number
+.datefmt <str>     Date string for title page
 
 FONT PARAMETERS
             textColor=colors.black,
@@ -53,6 +55,9 @@ TODO:
 import argparse
 import sys
 import os
+import datetime
+import re
+import unicodedata
 from reportlab.lib.pagesizes import A4, landscape, letter, portrait
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -84,6 +89,8 @@ class Booklet:
         self.keywords = None # Metadata
         self.cleaner = False # run the text through the cleaner
         self.scrubber = False # run the text through the scrubber
+        self.version = None
+        self.datefmt = None
     
     def create(self):
         #print("Creating canvas and defining frames...")
@@ -298,6 +305,11 @@ class Booklet:
         elif line.startswith('.scrubber'):
             arg = line.split()[1] if len(line.split()) > 1 else ''
             self.scrubber = arg.lower() not in ['0', 'false']
+        elif line.startswith('.version'):
+            self.version = line.split(' ', 1)[1] if len(line.split()) > 1 else None
+        elif line.startswith('.datefmt'):
+            self.datefmt = line.split(' ', 1)[1] if len(line.split()) > 1 else None
+            
         else:
             #print("Finished processing header. Creating canvas and frames...")
             # Stop processing header on first non-config line
@@ -324,6 +336,13 @@ class Booklet:
         if self.author:
             author_para = Paragraph(f"by {self.author}", author_style)
             self.addObject(author_para)
+            self.addObject(Spacer(1, self.currentStyle.fontSize*4))
+        if self.version:
+            version_para = Paragraph(f"Version {self.version}", self.buildParagraphStyle(fontSize=self.fontSize,alignment=reportlab.lib.enums.TA_CENTER))
+            self.addObject(version_para)
+        if self.datefmt:
+            date_para = Paragraph(format_current_date(self.datefmt), self.buildParagraphStyle(fontSize=self.fontSize,alignment=reportlab.lib.enums.TA_CENTER))
+            self.addObject(date_para)
         self.addObject(PageBreak())
         self.canvas.restoreState()
 
@@ -412,12 +431,47 @@ class Booklet:
     
         return result
 
+
+    def clean_line(self, line):
+        # Normalize common Unicode punctuation from pasted content.
+        # This helps with curly apostrophes, exotic exclamation marks, and other copy/paste artifacts.
+        line = unicodedata.normalize("NFKC", line)
+
+        replacements = {
+            '½': '1/2',
+            '¼': '1/4',
+            '¾': '3/4',
+            '°': ' deg',
+            '’': "'",
+            '‘': "'",
+            '‚': "'",
+            '‛': "'",
+            'ʼ': "'",
+            '′': "'",
+            'ˈ': "'",
+            '＇': "'",
+            '“': '"',
+            '”': '"',
+            '„': '"',
+            '«': '"',
+            '»': '"',
+            '–': '-',
+            '—': '-',
+            '―': '-',
+            '！': '!',
+            '‼': '!',
+            '¡': '!',
+        }
+        for original, replacement in replacements.items():
+            line = line.replace(original, replacement)
+        return line
+    
     def handleContent(self, line):
         if len(line) == 0:
             self.addObject(Spacer(1, self.currentStyle.fontSize)) # add a spacer for empty lines
             return
         if self.cleaner:
-            line = line.replace('½', '1/2').replace('¼', '1/4').replace('¾', '3/4').replace('°', ' deg')
+            line = self.clean_line(line)
         if self.scrubber:
             line = self.scrub(line)
         obj = Paragraph(line, self.currentStyle)
@@ -514,6 +568,43 @@ def ProcessArguments(args):
             outFilename += ".pdf"
     
     return inFilename, outFilename
+
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",]
+
+def format_current_date(format_string: str | None = None) -> str:
+    """Return today's date formatted using the custom tokens.
+
+    Tokens supported:
+      - d    : day number as one or two digits
+      - dd   : day number as two digits, padded with zeros
+      - m    : month number as one or two digits
+      - mm   : month number as two digits, padded with zeros
+      - mmm  : month name three letters, first letter capitalized
+      - MMM  : month name three letters, all caps
+      - yy   : year two digits
+      - yyyy : year four digits
+      - y    : year four digits
+
+    If no format string is passed, the default format is "dd mmm yyyy".
+    """
+    if format_string is None:
+        format_string = "dd mmm yyyy"
+
+    today = datetime.date.today()
+    replacements = {
+        "MMM": MONTH_NAMES[today.month - 1].upper(),
+        "mmm": MONTH_NAMES[today.month - 1],
+        "yyyy": f"{today.year:04d}",
+        "yy": f"{today.year % 100:02d}",
+        "dd": f"{today.day:02d}",
+        "mm": f"{today.month:02d}",
+        "d": str(today.day),
+        "m": str(today.month),
+        "y": f"{today.year:04d}",
+    }
+
+    token_pattern = re.compile(r"MMM|mmm|yyyy|yy|dd|mm|y|d|m")
+    return token_pattern.sub(lambda match: replacements[match.group(0)], format_string)
 
 
 def main():
