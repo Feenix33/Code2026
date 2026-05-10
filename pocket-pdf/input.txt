@@ -1,5 +1,7 @@
 .layout 8
 .author Howdy Doodie
+.version 1.0
+.datefmt dd mmm yyyy
 .title "This is a test"
 .keywords Alpha Bravo Charlie
 .subject Reading

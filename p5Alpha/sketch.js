@@ -5,6 +5,7 @@ function setup() {
 function draw() {
   background(220);
   fill(255, 0, 0);
+  fill(0, 255, 0, 127); // Semi-transparent green
   // Draw a hexagon
   beginShape();
   for (let i = 0; i < 6; i++) {
