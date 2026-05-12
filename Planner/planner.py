@@ -171,6 +171,20 @@ class WordPage(Page):
         title = getattr(self, 'title', 'Word Page')
         canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
 
+class GridPage(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        print(f"Grid color = {self.colorGrid}")
+
+    def draw(self, canvas):
+        spacing = getattr(self, 'spacing', 0.25*inch)
+        color = getattr(self, 'colorGrid', colors.lightgrey)
+        canvas.setStrokeColor(color)
+        for x in range(0, int(Page.max.x), int(spacing)):
+            canvas.line(x, 0, x, Page.max.y)
+        for y in range(int(Page.max.y), 0, -int(spacing)):
+            canvas.line(0, y, Page.max.x, y)
+
 class PageFactory:
     _registry = {
         'blank': BlankPage,
@@ -208,44 +222,48 @@ class Planner:
     def __init__(self,nameOut="output.pdf", docSize=letter, marginSize=0.2*inch, showFrames=True, drawFolds=True, separator=False):
         self.docSize = docSize
         self.margin = marginSize # how big is the margin for each frame
-        self.showFrames = showFrames # show the frame borders
+        #self.showFrames = showFrames # show the frame borders
         self.drawFolds = drawFolds # draw the fold lines or not
         self.canvas = None
         self.nameOut = nameOut
-        self.fontSize = None
-        self.separator = separator # put a spacer after every paragraph
+        #self.fontSize = None
+        #self.separator = separator # put a spacer after every paragraph
         self.author = None # Metadata
         self.title = None # Metadata
         self.subject = None # Metadata
         self.keywords = None # Metadata
-        self.version = None
+        #self.version = None
+        """
         self.page1 = PageFactory.create_page('blank', colorFrame=colors.black, title="Page 1")
         self.page2 = PlannerParser.parse_line('word colorFrame=colors.blue, fontsize=24 title="Second Page"', PageFactory)
         self.page3 = PlannerParser.parse_line('word colorFrame=colors.orange, title="Page 3"', PageFactory)
- 
+        self.page4 = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=yellow title="4 GridPage"', PageFactory)
+        """
+        self.pages = [None]*8
+        self.pages[0] = PageFactory.create_page('blank', colorFrame=colors.black, title="Page 1")
+        self.pages[1] = PlannerParser.parse_line('word colorFrame=colors.blue, fontsize=24 title="Second Page"', PageFactory)
+        self.pages[2] = PlannerParser.parse_line('word colorFrame=colors.orange, title="Page 3"', PageFactory)
+        self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=yellow title="4 GridPage"', PageFactory)
+         
     
     def create(self):
         self.docSize = landscape(self.docSize) 
-        if self.fontSize == None:
-            self.fontSize = 8
+        #if self.fontSize == None:
+        #    self.fontSize = 8
         self.corners = self.computePaneCorners()
         Page.max.x = (self.docSize[0] - 8*self.margin) / 4
         Page.max.y = (self.docSize[1] - 4*self.margin) / 2
         Page.mid.x = Page.max.x / 2
         Page.mid.y = Page.max.y / 2
 
-        #Pane computation max, mid
-        Page.max.x = (self.docSize[0] - 8*self.margin) / 4
-        Page.max.y = (self.docSize[1] - 4*self.margin) / 2
-        Page.mid.x = Page.max.x / 2
-        Page.mid.y = Page.max.y / 2
-
         self.canvas = Canvas(self.nameOut, pagesize=self.docSize)
-        self.frameN = 0
+        #self.frameN = 0
         if self.drawFolds: self.drawFoldlines() #self.canvas)
-        self.page1.render(self.canvas, False, self.corners[1])
-        self.page2.render(self.canvas, False, self.corners[2])
-        self.page3.render(self.canvas, True, self.corners[0])
+        n = 0
+        for page in self.pages:
+            if page is not None:
+                page.render(self.canvas, rotate=(n not in [0,1,2,3]), corner=self.corners[n%4])
+            n += 1
 
     def computePaneCorners(self):
         width, height = self.docSize
@@ -259,7 +277,7 @@ class Planner:
         f1 = Point(1*fWidth+3*margin, 0*fHeight+1*margin)
         f2 = Point(2*fWidth+5*margin, 0*fHeight+1*margin)
         f3 = Point(3*fWidth+7*margin, 0*fHeight+1*margin)
-        corners = [f0,f1,f2,f3]
+        corners = [f0,f1,f2,f3, f0]
         return corners
 
     def drawFoldlines(self):
