@@ -2,59 +2,26 @@
 Pocket planner 8-pg
 72 points per inch
 
-fonts: Helvetica, Times, Courier
-Alignment: 0-TA_LEFT 1-center 2-right 4-justify
-
-This order:
-    3R   2R
-    4    1
+fonts: Helvetica, Times-Roman, Courier
 
 Eight is 
 7 6 5 4 upside down
 8 1 2 3
 
-COMMANDS
-.font <font params> adjust the current font
-.newpage    force a framebreak (page because pocket docs)
-.spacer     add a spacer of current font size
-.file       Read in a file and process it, ignore config in the file 
-
-CONFIG
-.frames     Show frames
-.fold       Show folds 
-.margin #   Size of margins
-.separator  Separator/spacer after every paragraph
-.version    Version number
-
-PAGES
-.grid <spacing> <color>
-.lines <spacing> <color>
-.day <start> <last> <spacing> <date>
-.week <start>
-.month <start>
-.year <year>
-.todo <title> <spacing>
-.shop <title>
 
 
-FONT PARAMETERS
-            textColor=colors.black,
-            backColor=colors.white,
-            alignment=reportlab.lib.enums.TA_LEFT,
-            align=None,
-            firstLineIndent=0,
-            leftIndent=0,
-            bulletIndent=0,
-            fontName='Helvetica',
-            fontSize=10,
-            spaceBefore=0,
-            spaceAfter=None,
-            leading=None):
+TODO:
+- daily
+-- split format
+-- lines no lines
+-- hours right or left
+-- right justify text in space
+-- leading zeros in hours
 
-NOTES:
-- The padding is between the border and the text in the prototype:
-    Frame(x1, y1, width,height, leftPadding=6, bottomPadding=6, rightPadding=6, topPadding=6, id=None, showBoundary=0)
-
+- title font size
+- bold title
+- weekly two page spread
+- read from file
 """
 
 import argparse
@@ -87,7 +54,7 @@ def to_reportlab_color(val):
     if clean_val.startswith('#') or clean_val.startswith('#'):
         return colors.HexColor(clean_val)
     try: # handle named colors
-        print (f"Trying to convert color value '{val}' to a ReportLab color")
+        #print (f"Trying to convert color value '{val}' to a ReportLab color")
         return getattr(colors, clean_val, colors.yellowgreen)
     except AttributeError:
         print (f"ValueError(Unknown color: {val} using black")
@@ -96,22 +63,34 @@ def to_reportlab_color(val):
 class Page(ABC):
     mid = Point(0,0) # mid.x, mid.y for center of page
     max = Point(0,0) # max.x, max.y for top right corner of page
-    fontsize = 10
-
+    fontName = "Courier" # "Helvetica" "Times-Roman"
+    
     def __init__(self, **kwargs):
         kwargs = self._convert_types(kwargs)
 
         # Handle defaults
         if 'fontsize' in kwargs:
             self.fontsize = int(kwargs.pop('fontsize'))
+        else:
+            self.fontsize = 10
+        if 'drawFrame' in kwargs:
+            self.drawFrame = kwargs.pop('drawFrame')
+        else:
+            self.drawFrame = True
                                       
         for key,value in kwargs.items():
             setattr(self, key, value)
 
     CONVERTERS = {
         'colorFrame': to_reportlab_color,
+        'colorGrid': to_reportlab_color,
         'date': lambda v: datetime.datetime.strptime(v, '%Y-%m-%d').date(),
         'daystart': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
+        'time': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
+        'gridX': lambda v: int(v),
+        'gridY': lambda v: int(v),
+        'spacing': lambda v: float(v),
+        'drawFrame': lambda v: v.lower() in ['true', '1', 'yes']
     }
 
     def _convert_types(self, params):
@@ -129,7 +108,7 @@ class Page(ABC):
         pass
 
     def render(self, canvas, rotate, corner):
-        print (f"Rendering page with title {self.title} at corner {corner} with rotate={rotate}")
+        #print (f"Rendering page with title {self.title} at corner {corner} with rotate={rotate}")
         canvas.saveState()
         if rotate: 
             width, height = canvas._pagesize
@@ -137,29 +116,23 @@ class Page(ABC):
             canvas.rotate(180)
             canvas.translate(-width/2, -height/2)
         canvas.translate(corner.x, corner.y)
+
+        #frame drawing logic
+        drawFrame = getattr(self, 'drawFrame', True)
         colorFrame = getattr(self, 'colorFrame', None)
-        if colorFrame is not None:
-            print (f"Drawing frame for page with title {self.title} using color {colorFrame}")
+        if drawFrame and colorFrame is not None:
             canvas.setStrokeColor(self.colorFrame)
             canvas.rect(0,0, Page.max.x, Page.max.y)
+        
         self.draw(canvas)
         canvas.restoreState()
-
-
     
 class BlankPage(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
-        print(f"Blank page with title {self.title}")
-        pass
-
-class GridPage(Page):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def draw(self, canvas):
+        #print(f"Blank page with title {self.title}")
         pass
 
 class WordPage(Page):
@@ -167,29 +140,147 @@ class WordPage(Page):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
-        canvas.setFont("Helvetica", self.fontsize)
+        fontName = getattr(self, 'fontName', Page.fontName)
+        canvas.setFont(fontName, self.fontsize)
         title = getattr(self, 'title', 'Word Page')
         canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
 
 class GridPage(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        print(f"Grid color = {self.colorGrid}")
+        #print(f"Grid color = {self.colorGrid}")
 
     def draw(self, canvas):
-        spacing = getattr(self, 'spacing', 0.25*inch)
+        #print(f"Drawing grid page with title {self.title} and drawFrame={self.drawFrame}")
+        spacingX, spacingY = self._calculate_spacing()
+        self._draw_grid_lines(canvas, spacingX, spacingY)
+
+    def _calculate_spacing(self):
+        """Calculate grid spacing based on gridX, gridY, or default spacing."""
+        gridX = getattr(self, 'gridX', None)
+        gridY = getattr(self, 'gridY', None)
+        
+        # Both None: use default spacing
+        if gridX is None and gridY is None:
+            spacing = getattr(self, 'spacing', 0.25) * inch
+            return spacing, spacing
+        
+        # Only gridX: use it for both dimensions
+        if gridX is not None and gridY is None:
+            spacingX = Page.max.x / gridX
+            return spacingX, spacingX
+        
+        # Only gridY: use it for both dimensions
+        if gridY is not None and gridX is None:
+            spacingY = Page.max.y / gridY
+            return spacingY, spacingY
+        
+        # Both set: calculate independently
+        spacingX = Page.max.x / gridX
+        spacingY = Page.max.y / gridY
+        return spacingX, spacingY
+
+    def _draw_grid_lines(self, canvas, spacingX, spacingY):
+        """Draw vertical and horizontal grid lines."""
         color = getattr(self, 'colorGrid', colors.lightgrey)
         canvas.setStrokeColor(color)
-        for x in range(0, int(Page.max.x), int(spacing)):
+        
+        for x in range(0, int(Page.max.x), int(spacingX)):
             canvas.line(x, 0, x, Page.max.y)
-        for y in range(int(Page.max.y), 0, -int(spacing)):
+        
+        for y in range(int(Page.max.y), 0, -int(spacingY)):
             canvas.line(0, y, Page.max.x, y)
+
+class LinesPage(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def draw(self, canvas):
+        spacing = getattr(self, 'spacing', 0.25) * inch
+        color = getattr(self, 'colorGrid', colors.lightgrey)
+        canvas.setStrokeColor(color)
+        
+        yStart = int(Page.max.y)
+        #print(f"Lines title: {self.title} with fontsize {self.fontsize} and spacing {spacing}")
+        if self.title is not None:
+            fontName = getattr(self, 'fontName', Page.fontName)
+            canvas.setFont(fontName, self.fontsize)
+            canvas.drawCentredString(Page.mid.x, yStart - (self.fontsize*1.5), self.title)
+            yStart -= self.fontsize * 3
+
+        for y in range(int(yStart), 0, -int(spacing)):
+            canvas.line(0, y, Page.max.x, y)
+
+class ListPage(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'check' in kwargs: self.check = kwargs['check'].lower()
+        if 'checkbox' in kwargs: self.check = kwargs['checkbox'].lower()
+
+    def draw(self, canvas):
+        spacing = getattr(self, 'spacing', 0.25) * inch
+        color = getattr(self, 'colorGrid', colors.lightgrey)
+        canvas.setStrokeColor(color)
+        checkbox = getattr(self, 'check', 'box') in ['box', 'checkbox', 'square']
+
+        yStart = int(Page.max.y)
+        if self.title is not None:
+            canvas.setFont(self.fontName, self.fontsize)
+            canvas.drawCentredString(Page.mid.x, yStart - (self.fontsize*1.5), self.title)
+            yStart -= self.fontsize * 3
+
+        checkbox_size = self.fontsize * 0.8
+        margin = int (checkbox_size * 0.5)
+        for y in range(int(yStart), int(checkbox_size/2), -int(spacing)):
+            # Draw checkbox
+            if checkbox:
+                canvas.rect(margin, y - checkbox_size/2, checkbox_size, checkbox_size)
+            else:
+                canvas.circle(margin + checkbox_size/2, y, checkbox_size/2, stroke=1, fill=0)
+            # Draw line for text
+            canvas.line(checkbox_size + (margin*2), y - checkbox_size*0.8, Page.max.x-margin, y - checkbox_size*0.8)
+
+class Daily(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def draw(self, canvas):
+        today = getattr(self, 'date', datetime.date.today())
+        strToday = dayString(today, format="lll dd mmm yyyy")
+        time_cur = getattr(self, 'time', datetime.time(7, 30))
+        time_inc = getattr(self, 'timeInc', 30) # minutes
+
+        if isinstance(time_cur, str):
+            time_cur = datetime.datetime.strptime(time_cur  , '%H:%M').time()
+
+        y = int(Page.max.y)
+        justify = getattr(self, 'justify', 'center').lower()
+
+        canvas.setFont(self.fontName, self.fontsize)
+        if justify == 'left':
+            canvas.drawString(10, y - (self.fontsize*1.5), strToday)
+        elif justify == 'center':
+            canvas.drawCentredString(Page.mid.x, y - (self.fontsize*1.5), strToday)
+        elif justify == 'right':
+            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), strToday)
+        y -= self.fontsize * 3
+
+        while y > int(self.fontsize/2):
+            time_label = time_cur.strftime("%I:%M").lstrip('0').lower()
+            canvas.drawString(10, y, time_label)
+            time_cur = (datetime.datetime.combine(datetime.date.today(), time_cur)
+                        + datetime.timedelta(minutes=int(time_inc))).time()
+            y -= self.fontsize * 1.25
 
 class PageFactory:
     _registry = {
         'blank': BlankPage,
         'grid': GridPage,
         'word':  WordPage,
+        'lines': LinesPage,
+        'line': LinesPage,
+        'list': ListPage,
+        'daily': Daily
     }
 
     @classmethod
@@ -226,24 +317,18 @@ class Planner:
         self.drawFolds = drawFolds # draw the fold lines or not
         self.canvas = None
         self.nameOut = nameOut
-        #self.fontSize = None
-        #self.separator = separator # put a spacer after every paragraph
         self.author = None # Metadata
         self.title = None # Metadata
         self.subject = None # Metadata
         self.keywords = None # Metadata
-        #self.version = None
-        """
-        self.page1 = PageFactory.create_page('blank', colorFrame=colors.black, title="Page 1")
-        self.page2 = PlannerParser.parse_line('word colorFrame=colors.blue, fontsize=24 title="Second Page"', PageFactory)
-        self.page3 = PlannerParser.parse_line('word colorFrame=colors.orange, title="Page 3"', PageFactory)
-        self.page4 = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=yellow title="4 GridPage"', PageFactory)
-        """
+
         self.pages = [None]*8
-        self.pages[0] = PageFactory.create_page('blank', colorFrame=colors.black, title="Page 1")
-        self.pages[1] = PlannerParser.parse_line('word colorFrame=colors.blue, fontsize=24 title="Second Page"', PageFactory)
-        self.pages[2] = PlannerParser.parse_line('word colorFrame=colors.orange, title="Page 3"', PageFactory)
-        self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=yellow title="4 GridPage"', PageFactory)
+        #self.pages[0] = PageFactory.create_page('word', fontName="Times-Roman", colorFrame=colors.black, title="Page 1")
+        self.pages[0] = PlannerParser.parse_line('daily justify=left date=2026-05-11 time=07:00', PageFactory)
+        self.pages[1] = PlannerParser.parse_line('list fontName=Courier fontsize=18 colorFrame=colors.blue, title="GrocerieS"', PageFactory)
+        self.pages[2] = PlannerParser.parse_line('list checkbox=square  spacing=0.25 drawFrame=False title="Shopping List"', PageFactory)
+        self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=blue title="4 GridPage"', PageFactory)
+        self.pages[4] = PlannerParser.parse_line('grid drawFrame=False colorFrame=red, gridX=4 gridY=5 title="Grid 4"', PageFactory)
          
     
     def create(self):
@@ -300,9 +385,38 @@ class Planner:
         if self.keywords != None: self.canvas.setKeywords(self.keywords)
         self.canvas.save()
 
+def dayString(date, format="ddmmmyyyy"):
+    if isinstance(date, datetime.datetime):
+        date = date.date()
+    elif isinstance(date, str):
+        date = datetime.datetime.fromisoformat(date).date()
+    elif not isinstance(date, datetime.date):
+        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
+
+    day_name = date.strftime("%A")
+    month_name = date.strftime("%B")
+    month_abbrev = date.strftime("%b")
+    day_num = date.day
+
+    token_map = {
+        'l': day_name.capitalize(),
+        'lll': day_name[:3].capitalize(),
+        'LLL': day_name[:3].upper(),
+        'dd': f"{day_num:02d}",
+        'd': str(day_num),
+        'mmmm': month_name,
+        'mmm': month_abbrev.capitalize(),
+        'MMM': month_abbrev.upper(),
+        'yy': date.strftime("%y"),
+        'yyyy': date.strftime("%Y"),
+    }
+
+    # Use regex to replace tokens without affecting replacements
+    pattern = re.compile(r'\b(' + '|'.join(re.escape(token) for token in sorted(token_map, key=len, reverse=True)) + r')\b')
+    result = pattern.sub(lambda m: token_map[m.group(1)], format)
+    return result
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
-
 
 def main():
     #Read command line arguments
