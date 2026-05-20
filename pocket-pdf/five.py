@@ -610,6 +610,10 @@ def format_current_date(format_string: str | None = None) -> str:
 def main():
 
     #Read command line arguments
+    import os
+
+    print ("Starting Pocket PDF Generator...")
+    print(os.getcwd())
     inputFilename, outputFilename = ProcessArguments(sys.argv[1:])
 
     print(f"Converting: {inputFilename} to {outputFilename}")
@@ -620,4 +624,5 @@ def main():
     #booklet.build()
 
 if __name__ == '__main__':
+    print("Running as main program...")
     main()
