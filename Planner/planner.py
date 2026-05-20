@@ -12,16 +12,27 @@ Eight is
 
 TODO:
 - daily
--- split format
--- lines no lines
--- hours right or left
--- right justify text in space
--- leading zeros in hours
+x- split format
+x- lines no lines
+-- line style dots or dash
+-- start time
+-- increment 30 or 60 minutes
+x- hours right or left
+x- leading zeros in hours
+-- controls for all the above
 
 - title font size
 - bold title
 - weekly two page spread
+- weekly horizontal 5-day
 - read from file
+- monthly calendar
+- yearly
+- dots page
+- image page
+- some default icons w/on/off control
+- dice page
+
 """
 
 import argparse
@@ -255,19 +266,37 @@ class Daily(Page):
 
         y = int(Page.max.y)
         justify = getattr(self, 'justify', 'center').lower()
+        justify = 'splitDW'
 
-        canvas.setFont(self.fontName, self.fontsize)
+        canvas.setFont(self.fontName, self.fontsize*1.5)
         if justify == 'left':
             canvas.drawString(10, y - (self.fontsize*1.5), strToday)
         elif justify == 'center':
             canvas.drawCentredString(Page.mid.x, y - (self.fontsize*1.5), strToday)
         elif justify == 'right':
             canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), strToday)
+        elif justify == 'splitWD':
+            canvas.drawString(10, y - (self.fontsize*1.5), dayString(today, format="lll"))
+            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), dayString(today, format="dd mmm"))
+        elif justify == 'splitDW':
+            canvas.drawString(10, y - (self.fontsize*1.5), dayString(today, format="dd mmm"))
+            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), dayString(today, format="lll"))
+        canvas.line(0, y - (self.fontsize*1.5) - 5, Page.max.x, y - (self.fontsize*1.5) - 5)
         y -= self.fontsize * 3
+        canvas.setFont(self.fontName, self.fontsize)
 
         while y > int(self.fontsize/2):
-            time_label = time_cur.strftime("%I:%M").lstrip('0').lower()
-            canvas.drawString(10, y, time_label)
+            #time_label = time_cur.strftime("%I:%M").lstrip('0').lower()
+            time_label = time_cur.strftime("%I:%M").lower()
+            #canvas.drawString(10, y, time_label)
+            offset = self.fontsize * 0.25
+            #linestart = 10 + canvas.stringWidth(time_label, self.fontName, self.fontsize) + 5
+            #canvas.line(linestart, y - offset, Page.max.x, y - offset)
+
+            canvas.drawRightString(Page.max.x - 10, y, time_label)
+            linestart = Page.max.x - 10 - canvas.stringWidth(time_label, self.fontName, self.fontsize) - 5
+            canvas.line(10, y - offset, linestart, y - offset)
+
             time_cur = (datetime.datetime.combine(datetime.date.today(), time_cur)
                         + datetime.timedelta(minutes=int(time_inc))).time()
             y -= self.fontsize * 1.25
