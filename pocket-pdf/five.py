@@ -609,20 +609,28 @@ def format_current_date(format_string: str | None = None) -> str:
 
 def main():
 
-    #Read command line arguments
+    # Read command line arguments
     import os
+    import sys
 
-    print ("Starting Pocket PDF Generator...")
-    print(os.getcwd())
-    inputFilename, outputFilename = ProcessArguments(sys.argv[1:])
+    #print("Starting Pocket PDF Generator...")
+    #print("Current working directory:", os.getcwd())
+    #print("Arguments passed:", sys.argv)
+
+    try:
+        #print("Before processing arguments")
+        inputFilename, outputFilename = ProcessArguments(sys.argv[1:])
+        #print("After processing arguments")
+    except Exception as e:
+        print(f"Error in ProcessArguments: {e}")
+        sys.exit(1)
 
     print(f"Converting: {inputFilename} to {outputFilename}")
 
     booklet = Booklet(nameOut=outputFilename)
     booklet.makeBooklet(inputFilename)
-    #booklet.processFile(inputFilename)
-    #booklet.build()
+    # booklet.processFile(inputFilename)
+    # booklet.build()
 
 if __name__ == '__main__':
-    print("Running as main program...")
     main()
