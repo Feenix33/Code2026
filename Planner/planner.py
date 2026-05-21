@@ -80,6 +80,7 @@ class Page(ABC):
         kwargs = self._convert_types(kwargs)
 
         # Handle defaults
+        self.title = kwargs.pop('title', None)
         if 'fontsize' in kwargs:
             self.fontsize = int(kwargs.pop('fontsize'))
         else:
@@ -97,10 +98,13 @@ class Page(ABC):
         'colorGrid': to_reportlab_color,
         'date': lambda v: datetime.datetime.strptime(v, '%Y-%m-%d').date(),
         'daystart': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
+        'startTime': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
+        'endTime': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
         'time': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
         'gridX': lambda v: int(v),
         'gridY': lambda v: int(v),
         'spacing': lambda v: float(v),
+        'dash': lambda v: int(v),
         'drawFrame': lambda v: v.lower() in ['true', '1', 'yes']
     }
 
@@ -209,6 +213,12 @@ class LinesPage(Page):
     def draw(self, canvas):
         spacing = getattr(self, 'spacing', 0.25) * inch
         color = getattr(self, 'colorGrid', colors.lightgrey)
+        dash = getattr(self, 'dash', None)
+        if dash is not None:
+            canvas.setDash(dash)
+            dashOn = getattr(self, 'dashOn', dash) % 10
+            dashOff = getattr(self, 'dashOff', dash) / 10
+            canvas.setDash(dashOn, dashOff)
         canvas.setStrokeColor(color)
         
         yStart = int(Page.max.y)
@@ -258,8 +268,9 @@ class Daily(Page):
     def draw(self, canvas):
         today = getattr(self, 'date', datetime.date.today())
         strToday = dayString(today, format="lll dd mmm yyyy")
-        time_cur = getattr(self, 'time', datetime.time(7, 30))
+        time_cur = getattr(self, 'startTime', datetime.time(7, 30))
         time_inc = getattr(self, 'timeInc', 30) # minutes
+        end_time = getattr(self, 'endTime', datetime.time(23, 0))
 
         if isinstance(time_cur, str):
             time_cur = datetime.datetime.strptime(time_cur  , '%H:%M').time()
@@ -285,7 +296,8 @@ class Daily(Page):
         y -= self.fontsize * 3
         canvas.setFont(self.fontName, self.fontsize)
 
-        while y > int(self.fontsize/2):
+        canvas.setDash(1,1)
+        while y > int(self.fontsize/2) and time_cur < end_time:
             #time_label = time_cur.strftime("%I:%M").lstrip('0').lower()
             time_label = time_cur.strftime("%I:%M").lower()
             #canvas.drawString(10, y, time_label)
@@ -353,8 +365,9 @@ class Planner:
 
         self.pages = [None]*8
         #self.pages[0] = PageFactory.create_page('word', fontName="Times-Roman", colorFrame=colors.black, title="Page 1")
-        self.pages[0] = PlannerParser.parse_line('daily justify=left date=2026-05-11 time=07:00', PageFactory)
-        self.pages[1] = PlannerParser.parse_line('list fontName=Courier fontsize=18 colorFrame=colors.blue, title="GrocerieS"', PageFactory)
+        self.pages[0] = PlannerParser.parse_line('daily justify=left date=2026-05-11 startTime=06:00 timeInc=60 endTime=13:00', PageFactory)
+        self.pages[1] = PlannerParser.parse_line('lines color=green dash=48', PageFactory)
+        #self.pages[1] = PlannerParser.parse_line('list fontName=Courier fontsize=18 colorFrame=colors.blue, title="GrocerieS"', PageFactory)
         self.pages[2] = PlannerParser.parse_line('list checkbox=square  spacing=0.25 drawFrame=False title="Shopping List"', PageFactory)
         self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=blue title="4 GridPage"', PageFactory)
         self.pages[4] = PlannerParser.parse_line('grid drawFrame=False colorFrame=red, gridX=4 gridY=5 title="Grid 4"', PageFactory)
