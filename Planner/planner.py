@@ -13,13 +13,14 @@ Eight is
 TODO:
 - daily
 x- split format
-x- lines no lines
--- line style dots or dash
--- start time
--- increment 30 or 60 minutes
-x- hours right or left
-x- leading zeros in hours
+xx lines no lines
+xx line style dots or dash
+xx start time
+xx increment 30 or 60 minutes
+xx hours right or left
+xx leading zeros in hours
 -- controls for all the above
+-- convert to new header formatter
 
 - title font size
 - bold title
@@ -105,7 +106,8 @@ class Page(ABC):
         'gridY': lambda v: int(v),
         'spacing': lambda v: float(v),
         'dash': lambda v: int(v),
-        'drawFrame': lambda v: v.lower() in ['true', '1', 'yes']
+        'drawFrame': lambda v: v.lower() in ['true', '1', 'yes'],
+        'drawLines': lambda v: v.lower() in ['true', '1', 'yes'],
     }
 
     def _convert_types(self, params):
@@ -121,6 +123,14 @@ class Page(ABC):
     @abstractmethod
     def draw(self, canvas):
         pass
+
+    def setDash(self, canvas):
+        dash = getattr(self, 'dash', None)
+        if dash is not None:
+            canvas.setDash(dash)
+            dashOn = getattr(self, 'dashOn', dash) % 10
+            dashOff = getattr(self, 'dashOff', dash) / 10
+            canvas.setDash(dashOn, dashOff)
 
     def render(self, canvas, rotate, corner):
         #print (f"Rendering page with title {self.title} at corner {corner} with rotate={rotate}")
@@ -214,11 +224,7 @@ class LinesPage(Page):
         spacing = getattr(self, 'spacing', 0.25) * inch
         color = getattr(self, 'colorGrid', colors.lightgrey)
         dash = getattr(self, 'dash', None)
-        if dash is not None:
-            canvas.setDash(dash)
-            dashOn = getattr(self, 'dashOn', dash) % 10
-            dashOff = getattr(self, 'dashOff', dash) / 10
-            canvas.setDash(dashOn, dashOff)
+        Page.setDash(self, canvas)
         canvas.setStrokeColor(color)
         
         yStart = int(Page.max.y)
@@ -271,13 +277,13 @@ class Daily(Page):
         time_cur = getattr(self, 'startTime', datetime.time(7, 30))
         time_inc = getattr(self, 'timeInc', 30) # minutes
         end_time = getattr(self, 'endTime', datetime.time(23, 0))
+        timeSide = getattr(self, 'timeSide', 'left').lower()
 
         if isinstance(time_cur, str):
             time_cur = datetime.datetime.strptime(time_cur  , '%H:%M').time()
 
         y = int(Page.max.y)
         justify = getattr(self, 'justify', 'center').lower()
-        justify = 'splitDW'
 
         canvas.setFont(self.fontName, self.fontsize*1.5)
         if justify == 'left':
@@ -296,18 +302,22 @@ class Daily(Page):
         y -= self.fontsize * 3
         canvas.setFont(self.fontName, self.fontsize)
 
-        canvas.setDash(1,1)
-        while y > int(self.fontsize/2) and time_cur < end_time:
-            #time_label = time_cur.strftime("%I:%M").lstrip('0').lower()
-            time_label = time_cur.strftime("%I:%M").lower()
-            #canvas.drawString(10, y, time_label)
-            offset = self.fontsize * 0.25
-            #linestart = 10 + canvas.stringWidth(time_label, self.fontName, self.fontsize) + 5
-            #canvas.line(linestart, y - offset, Page.max.x, y - offset)
+        Page.setDash(self, canvas)
+        drawLines = getattr(self, 'drawLines', True)
 
-            canvas.drawRightString(Page.max.x - 10, y, time_label)
-            linestart = Page.max.x - 10 - canvas.stringWidth(time_label, self.fontName, self.fontsize) - 5
-            canvas.line(10, y - offset, linestart, y - offset)
+        while y > int(self.fontsize/2) and time_cur < end_time:
+            time_label = time_cur.strftime("%I:%M").lower()
+            offset = self.fontsize * 0.25
+            if timeSide == 'right':
+                canvas.drawRightString(Page.max.x - 10, y, time_label)
+                if drawLines:
+                    linestart = Page.max.x - 10 - canvas.stringWidth(time_label, self.fontName, self.fontsize) - 5
+                    canvas.line(10, y - offset, linestart, y - offset)
+            else:
+                canvas.drawString(10, y, time_label)
+                if drawLines:
+                    linestart = 10 + canvas.stringWidth(time_label, self.fontName, self.fontsize) + 5
+                    canvas.line(linestart, y - offset, Page.max.x, y - offset)
 
             time_cur = (datetime.datetime.combine(datetime.date.today(), time_cur)
                         + datetime.timedelta(minutes=int(time_inc))).time()
@@ -365,8 +375,9 @@ class Planner:
 
         self.pages = [None]*8
         #self.pages[0] = PageFactory.create_page('word', fontName="Times-Roman", colorFrame=colors.black, title="Page 1")
-        self.pages[0] = PlannerParser.parse_line('daily justify=left date=2026-05-11 startTime=06:00 timeInc=60 endTime=13:00', PageFactory)
-        self.pages[1] = PlannerParser.parse_line('lines color=green dash=48', PageFactory)
+        self.pages[0] = PlannerParser.parse_line('daily justify=center timeSide=right date=2026-05-11 startTime=06:00 timeInc=60  dash=22', PageFactory)
+        self.pages[1] = PlannerParser.parse_line('daily justify=center timeSide=left drawLines=False date=2026-05-11 startTime=06:00 timeInc=60  dash=22', PageFactory)
+        #self.pages[1] = PlannerParser.parse_line('lines color=green dash=48', PageFactory)
         #self.pages[1] = PlannerParser.parse_line('list fontName=Courier fontsize=18 colorFrame=colors.blue, title="GrocerieS"', PageFactory)
         self.pages[2] = PlannerParser.parse_line('list checkbox=square  spacing=0.25 drawFrame=False title="Shopping List"', PageFactory)
         self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=blue title="4 GridPage"', PageFactory)
@@ -458,6 +469,149 @@ def dayString(date, format="ddmmmyyyy"):
     result = pattern.sub(lambda m: token_map[m.group(1)], format)
     return result
 
+
+def dailyHeader(date, formatStr="+ddmmmyy+"):
+    """
+    Parse a date and format string to return three strings: left, center, right.
+    
+    Format codes:
+    - d: day of month (1-31)
+    - dd: day of month (01-31)
+    - m: month number (1-12)
+    - mm: month number (01-12)
+    - mmm: month abbreviation (Jan-Dec, first letter capitalized)
+    - MMM: month abbreviation (JAN-DEC, all caps)
+    - mmmm: month name (January-December, first letter capitalized)
+    - w: day of week single letter (M, T, W, R for Thu, F, J for Sat, S)
+    - www: day of week abbreviation (Mon-Sun, first letter capitalized)
+    - WWW: day of week abbreviation (MON-SUN, all caps)
+    - wwww: day of week full name (Monday-Sunday)
+    - n: week number (ISO week starting Monday, 1-53)
+    - nn: week number (01-53)
+    - yyyy: 4-digit year (e.g., 2026)
+    - yy: 2-digit year (e.g., 26)
+    - +: separator between left, center, right fields
+    
+    The + character separates left, center, and right fields:
+    - "+ddmmmyy+" results in left='', center='ddmmmyy', right=''
+    - "++ddmmmyy" results in left='', center='', right='ddmmmyy'
+    - "ddmmmyy++" results in left='ddmmmyy', center='', right=''
+    
+    Returns:
+        tuple: (leftStr, centerStr, rightStr)
+    """
+    if isinstance(date, str):
+        date = datetime.datetime.fromisoformat(date).date()
+    elif isinstance(date, datetime.datetime):
+        date = date.date()
+    elif not isinstance(date, datetime.date):
+        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
+    
+    # Split format string by '+' to get left, center, right
+    parts = formatStr.split('+')
+    leftFmt = parts[0] if len(parts) > 0 else ''
+    centerFmt = parts[1] if len(parts) > 1 else ''
+    rightFmt = parts[2] if len(parts) > 2 else ''
+    
+    def replaceTokens(fmt):
+        if not fmt:
+            return ''
+        
+        day_name = date.strftime("%A")
+        month_name = date.strftime("%B")
+        month_abbrev = date.strftime("%b")
+        day_num = date.day
+        month_num = date.month
+        year_num = date.year
+        
+        # Day of week single letter codes
+        dow_single_map = {
+            'Monday': 'M',
+            'Tuesday': 'T',
+            'Wednesday': 'W',
+            'Thursday': 'R',
+            'Friday': 'F',
+            'Saturday': 'J',
+            'Sunday': 'S'
+        }
+        dow_single = dow_single_map.get(day_name, day_name[0].upper())
+        
+        # Day of week abbreviation
+        dow_abbrev = day_name[:3]
+        
+        # Get week number (ISO week, week starting Monday)
+        iso_calendar = date.isocalendar()
+        week_num = iso_calendar[1]
+        
+        token_map = {
+            'wwww': day_name,
+            'WWW': day_name.upper(),
+            'www': dow_abbrev.capitalize(),
+            'w': dow_single,
+            'mmmm': month_name,
+            'MMM': month_abbrev.upper(),
+            'mmm': month_abbrev.capitalize(),
+            'mm': f"{month_num:02d}",
+            'm': str(month_num),
+            'yyyy': str(year_num),
+            'yy': date.strftime("%y"),
+            'dd': f"{day_num:02d}",
+            'd': str(day_num),
+            'nn': f"{week_num:02d}",
+            'n': str(week_num),
+        }
+        
+        # Sort by token length descending to match longer tokens first
+        pattern = re.compile('(' + '|'.join(re.escape(token) for token in sorted(token_map.keys(), key=len, reverse=True)) + ')')
+        result = pattern.sub(lambda m: token_map[m.group(1)], fmt)
+        return result
+    
+    leftStr = replaceTokens(leftFmt)
+    centerStr = replaceTokens(centerFmt)
+    rightStr = replaceTokens(rightFmt)
+    
+    return leftStr, centerStr, rightStr
+
+def test_dailyHeader():
+    test_date = datetime.date(2026, 5, 11)  # Monday, May 11, 2026
+    
+    test_cases = [
+        {
+            'formatStr': "+ddmmmyy+",
+            'expected': ("", "11May26", "")
+        },
+        {
+            'formatStr': "++ddmmmyy",
+            'expected': ("", "", "11May26")
+        },
+        {
+            'formatStr': "ddmmmyy++",
+            'expected': ("11May26", "", "")
+        },
+        {
+            'formatStr': "w dd mmm yyyy",
+            'expected': ("M 11 May 2026", "", "")
+        },
+        {
+            'formatStr': "www+dd mmm+www",
+            'expected': ("Mon", "11 May", "Mon")
+        }
+    ]
+    
+    for i, test_case in enumerate(test_cases):
+        formatStr = test_case['formatStr']
+        expected_left, expected_center, expected_right = test_case['expected']
+        
+        left, center, right = dailyHeader(test_date, formatStr)
+        print(f"Test {i+1}: date {test_date} format '{formatStr}': left='{left}', center='{center}', right='{right}'")
+        
+        assert left == expected_left, f"Test {i+1} FAILED: left expected '{expected_left}', got '{left}'"
+        assert center == expected_center, f"Test {i+1} FAILED: center expected '{expected_center}', got '{center}'"
+        assert right == expected_right, f"Test {i+1} FAILED: right expected '{expected_right}', got '{right}'"
+        print(f"  ✓ Test {i+1} passed")
+    
+    print(f"All {len(test_cases)} tests passed!")
+
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
 def main():
@@ -465,6 +619,7 @@ def main():
     config = None
     outputFilename = 'Planner.pdf'
 
+    #test_dailyHeader()
     booklet = Planner(nameOut=outputFilename)
     booklet.makePlanner(config)
 
