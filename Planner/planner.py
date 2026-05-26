@@ -12,15 +12,15 @@ Eight is
 
 TODO:
 - daily
-x- split format
+xx split format
 xx lines no lines
 xx line style dots or dash
 xx start time
 xx increment 30 or 60 minutes
 xx hours right or left
 xx leading zeros in hours
--- controls for all the above
--- convert to new header formatter
+xx controls for all the above
+xx convert to new header formatter
 
 - title font size
 - bold title
@@ -270,10 +270,10 @@ class ListPage(Page):
 class Daily(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+        
     def draw(self, canvas):
         today = getattr(self, 'date', datetime.date.today())
-        strToday = dayString(today, format="lll dd mmm yyyy")
+        strLeft, strCenter, strRight = dailyHeader(today, formatStr=getattr(self, 'format', "ddmmm++yyyy"))
         time_cur = getattr(self, 'startTime', datetime.time(7, 30))
         time_inc = getattr(self, 'timeInc', 30) # minutes
         end_time = getattr(self, 'endTime', datetime.time(23, 0))
@@ -283,23 +283,16 @@ class Daily(Page):
             time_cur = datetime.datetime.strptime(time_cur  , '%H:%M').time()
 
         y = int(Page.max.y)
-        justify = getattr(self, 'justify', 'center').lower()
 
         canvas.setFont(self.fontName, self.fontsize*1.5)
-        if justify == 'left':
-            canvas.drawString(10, y - (self.fontsize*1.5), strToday)
-        elif justify == 'center':
-            canvas.drawCentredString(Page.mid.x, y - (self.fontsize*1.5), strToday)
-        elif justify == 'right':
-            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), strToday)
-        elif justify == 'splitWD':
-            canvas.drawString(10, y - (self.fontsize*1.5), dayString(today, format="lll"))
-            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), dayString(today, format="dd mmm"))
-        elif justify == 'splitDW':
-            canvas.drawString(10, y - (self.fontsize*1.5), dayString(today, format="dd mmm"))
-            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), dayString(today, format="lll"))
+        if strLeft != '':
+            canvas.drawString(10, y - (self.fontsize*1.5), strLeft)
+        if strCenter != '':
+            canvas.drawCentredString(Page.mid.x, y - (self.fontsize*1.5), strCenter)
+        if strRight != '':
+            canvas.drawRightString(Page.max.x - 10, y - (self.fontsize*1.5), strRight)
         canvas.line(0, y - (self.fontsize*1.5) - 5, Page.max.x, y - (self.fontsize*1.5) - 5)
-        y -= self.fontsize * 3
+        y -= self.fontsize * 4
         canvas.setFont(self.fontName, self.fontsize)
 
         Page.setDash(self, canvas)
@@ -373,17 +366,85 @@ class Planner:
         self.subject = None # Metadata
         self.keywords = None # Metadata
 
-        self.pages = [None]*8
-        #self.pages[0] = PageFactory.create_page('word', fontName="Times-Roman", colorFrame=colors.black, title="Page 1")
-        self.pages[0] = PlannerParser.parse_line('daily justify=center timeSide=right date=2026-05-11 startTime=06:00 timeInc=60  dash=22', PageFactory)
-        self.pages[1] = PlannerParser.parse_line('daily justify=center timeSide=left drawLines=False date=2026-05-11 startTime=06:00 timeInc=60  dash=22', PageFactory)
-        #self.pages[1] = PlannerParser.parse_line('lines color=green dash=48', PageFactory)
-        #self.pages[1] = PlannerParser.parse_line('list fontName=Courier fontsize=18 colorFrame=colors.blue, title="GrocerieS"', PageFactory)
-        self.pages[2] = PlannerParser.parse_line('list checkbox=square  spacing=0.25 drawFrame=False title="Shopping List"', PageFactory)
-        self.pages[3] = PlannerParser.parse_line('grid colorFrame=colors.green colorGrid=blue title="4 GridPage"', PageFactory)
-        self.pages[4] = PlannerParser.parse_line('grid drawFrame=False colorFrame=red, gridX=4 gridY=5 title="Grid 4"', PageFactory)
-         
+        self.init_default_pages()
+
     
+    def init_default_pages(self):
+        """Initialize eight default Planner pages as line pages."""
+        self.pages = [PageFactory.create_page('lines', colorGrid=colors.red) for _ in range(8)]
+
+    def readDescription(self, filename=None):
+        """Load page descriptions from a file.
+
+        If no filename is provided or the file does not exist, the default
+        eight line pages remain in place.
+        """
+        self.init_default_pages()
+        if not filename or not os.path.exists(filename):
+            return
+
+        assigned = [False] * 8
+        description_count = 0
+        with open(filename, 'r', encoding='utf-8') as fh:
+            for raw_line in fh:
+                print(f"Reading line: {raw_line.strip()}")
+                if description_count >= 8:
+                    break
+
+                line = raw_line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                page_number = None
+                line_body = line
+                parts = line.split(None, 1)
+                if parts and parts[0].isdigit():
+                    page_number = int(parts[0])
+                    line_body = parts[1].strip() if len(parts) > 1 else ''
+
+                if not line_body:
+                    continue
+
+                try:
+                    page = PlannerParser.parse_line(line_body, PageFactory)
+                except Exception as e:
+                    print(f"Warning: could not parse line '{line}': {e}")
+                    continue
+
+                if page is None:
+                    continue
+
+                if page_number is not None and 1 <= page_number <= 8:
+                    target_index = page_number % 8
+                    self.pages[target_index] = page
+                    assigned[target_index] = True
+                else:
+                    for idx in range(8):
+                        if not assigned[idx]:
+                            self.pages[idx] = page
+                            assigned[idx] = True
+                            break
+
+                description_count += 1
+
+    def echoConfig(self):
+        """Print a human-readable representation of the 8 planner pages."""
+        print("Planner Configuration:")
+        print("=" * 60)
+        for idx, page in enumerate(self.pages):
+            page_num = idx + 1
+            if page is None:
+                print(f"Page {page_num}: <None>")
+            else:
+                page_type = page.__class__.__name__
+                print(f"Page {page_num}: {page_type}")
+                
+                # Print relevant attributes
+                for attr, value in sorted(page.__dict__.items()):
+                    if not attr.startswith('_'):
+                        print(f"  {attr}: {value}")
+        print("=" * 60)
+
     def create(self):
         self.docSize = landscape(self.docSize) 
         #if self.fontSize == None:
@@ -621,6 +682,8 @@ def main():
 
     #test_dailyHeader()
     booklet = Planner(nameOut=outputFilename)
+    booklet.readDescription('input.txt')
+    #booklet.echoConfig()
     booklet.makePlanner(config)
 
 if __name__ == '__main__':
