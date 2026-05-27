@@ -33,6 +33,9 @@ xx convert to new header formatter
 - image page
 - some default icons w/on/off control
 - dice page
+- cut line
+- change font function
+- organize the colors
 
 """
 
@@ -316,6 +319,62 @@ class Daily(Page):
                         + datetime.timedelta(minutes=int(time_inc))).time()
             y -= self.fontsize * 1.25
 
+class Weekly(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.title = getattr(self, 'title', 'Weekly Planner')
+
+    def drawWeeklyFrames(self, canvas, isWeekend=False):
+        canvas.setStrokeColor(colors.red)
+        canvas.rect(0, 0, Page.max.x, Page.max.y)
+        canvas.line(0, Page.max.y/3, Page.max.x, Page.max.y/3)
+        canvas.line(0, 2*Page.max.y/3, Page.max.x, 2*Page.max.y/3)
+        if isWeekend:
+            canvas.line(Page.max.x/2, Page.max.y/3, Page.max.x/2, 0)
+
+    def draw(self, canvas):
+        isWeekend = getattr(self, 'weekend', False)
+        isWeekend = True
+        self.drawWeeklyFrames(canvas, isWeekend)
+        formatStr = getattr(self, 'format', "%b%d\t%a")
+
+        fontName = getattr(self, 'fontName', Page.fontName)
+        fontSize = getattr(self, 'fontsize', 7)
+        canvas.setFont(fontName, fontSize)
+        
+        lineHt = self.fontsize * 1.25
+        dayNum = datetime.date.today()
+        theDay = getMonday(dayNum)
+        if isWeekend:
+            theDay = theDay + datetime.timedelta(days=3)
+             # start on Sunday if weekend mode
+        ypos = Page.max.y - lineHt
+        lstr, cstr, rstr = buildDateHeader(theDay, formatStr=formatStr)
+        canvas.drawString(10, ypos, lstr)
+        canvas.drawRightString(Page.max.x - 10, ypos, cstr)
+
+        theDay = theDay + datetime.timedelta(days=1)
+        ypos = ypos - (Page.max.y/3)
+        lstr, cstr, rstr = buildDateHeader(theDay, formatStr=formatStr)
+        canvas.drawString(10, ypos, lstr)
+        canvas.drawRightString(Page.max.x - 10, ypos, cstr)
+
+        theDay = theDay + datetime.timedelta(days=1)
+        ypos = ypos - (Page.max.y/3)
+        lstr, cstr, rstr = buildDateHeader(theDay, formatStr=formatStr)
+        if isWeekend:
+            canvas.drawString(10, ypos, lstr)
+            canvas.drawRightString(Page.max.x/2 - 10, ypos, cstr)
+            theDay = theDay + datetime.timedelta(days=1)
+            lstr, cstr, rstr = buildDateHeader(theDay, formatStr=formatStr)
+            canvas.drawString(Page.max.x/2 + 10, ypos, lstr)
+            canvas.drawRightString(Page.max.x - 10, ypos, cstr)
+        else:
+            canvas.drawString(10, ypos, lstr)
+            canvas.drawRightString(Page.max.x - 10, ypos, cstr)
+
+        pass
+
 class PageFactory:
     _registry = {
         'blank': BlankPage,
@@ -324,7 +383,8 @@ class PageFactory:
         'lines': LinesPage,
         'line': LinesPage,
         'list': ListPage,
-        'daily': Daily
+        'daily': Daily,
+        'weekly': Weekly,
     }
 
     @classmethod
@@ -352,7 +412,6 @@ class PlannerParser:
                 print(f"Warning: Ignoring invalid token '{kv}' in line: {line}")
         return factory.create_page(page_type, **kwargs) 
 
-
 class Planner: 
     def __init__(self,nameOut="output.pdf", docSize=letter, marginSize=0.2*inch, showFrames=True, drawFolds=True, separator=False):
         self.docSize = docSize
@@ -371,7 +430,8 @@ class Planner:
     
     def init_default_pages(self):
         """Initialize eight default Planner pages as line pages."""
-        self.pages = [PageFactory.create_page('lines', colorGrid=colors.red) for _ in range(8)]
+        #self.pages = [PageFactory.create_page('lines', colorGrid=colors.grey) for _ in range(8)]
+        self.pages = [PageFactory.create_page('blank', colorFrame=colors.yellow) for _ in range(8)]
 
     def readDescription(self, filename=None):
         """Load page descriptions from a file.
@@ -387,7 +447,7 @@ class Planner:
         description_count = 0
         with open(filename, 'r', encoding='utf-8') as fh:
             for raw_line in fh:
-                print(f"Reading line: {raw_line.strip()}")
+                #print(f"Reading line: {raw_line.strip()}")
                 if description_count >= 8:
                     break
 
@@ -530,7 +590,6 @@ def dayString(date, format="ddmmmyyyy"):
     result = pattern.sub(lambda m: token_map[m.group(1)], format)
     return result
 
-
 def dailyHeader(date, formatStr="+ddmmmyy+"):
     """
     Parse a date and format string to return three strings: left, center, right.
@@ -632,6 +691,47 @@ def dailyHeader(date, formatStr="+ddmmmyy+"):
     rightStr = replaceTokens(rightFmt)
     
     return leftStr, centerStr, rightStr
+
+def buildDateHeader(date, formatStr="\t%d%b%y\t"):
+    """Build a date header with left, center, and right fields.
+
+    The format string is split using tab characters into three parts:
+    left, center, and right. Each part is formatted with standard
+    datetime.strftime directives.
+    """
+    if isinstance(date, str):
+        date = datetime.datetime.fromisoformat(date).date()
+    elif isinstance(date, datetime.datetime):
+        date = date.date()
+    elif not isinstance(date, datetime.date):
+        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
+
+    parts = formatStr.split('\t')
+    parts += [''] * (3 - len(parts))
+    left_fmt, center_fmt, right_fmt = parts[:3]
+
+    left = date.strftime(left_fmt) if left_fmt else ''
+    center = date.strftime(center_fmt) if center_fmt else ''
+    right = date.strftime(right_fmt) if right_fmt else ''
+
+    return left, center, right
+
+def getMonday(date, dayOffset=0):
+    """Given a date, return the Monday of that week with an optional day offset."""
+    if isinstance(date, str):
+        date = datetime.datetime.fromisoformat(date).date()
+    elif isinstance(date, datetime.datetime):
+        date = date.date()
+    elif not isinstance(date, datetime.date):
+        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
+    
+    # Calculate the Monday of the week
+    monday = date - datetime.timedelta(days=date.weekday())
+    
+    # Apply the day offset
+    target_date = monday + datetime.timedelta(days=dayOffset)
+    
+    return target_date
 
 def test_dailyHeader():
     test_date = datetime.date(2026, 5, 11)  # Monday, May 11, 2026

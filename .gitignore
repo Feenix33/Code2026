@@ -2,3 +2,5 @@ tt*.py
 *.txt
 assets
 */archive/*
+VSLearn
+VSLearn/*
