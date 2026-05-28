@@ -15,6 +15,7 @@ TODO:
 - bold title
 - weekly horizontal 5-day (this needs additional rotation?)
 - monthly calendar
+- monthly rotated
 - yearly
 - dots page
 - hex page
@@ -438,6 +439,33 @@ class Weekly(Page):
 
         pass
 
+class WorkWeek(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def draw(self, canvas):
+        canvas.saveState()
+
+        canvas.translate(Page.mid.x, Page.mid.y)
+        canvas.rotate(90)
+        pmid = Point(Page.mid.y, Page.mid.x)
+        pmax = Point(Page.max.y, Page.max.x)
+        canvas.translate(-Page.mid.y, -Page.mid.x)
+        #canvas.translate(-Page.mid.x, -Page.mid.y)
+        #canvas.translate(Page.mid.x/2, -Page.mid.y/4)
+        
+
+        canvas.setStrokeColor(getattr(self, 'colorGrid', colors.red))
+        canvas.line(0,0, pmid.x, pmid.y)
+        #canvas.setStrokeColor(colors.green)
+        #canvas.rect(0, 0, pmax.x, pmax.y)
+        canvas.setStrokeColor(colors.navy)
+        canvas.circle(0, pmax.y, 10, stroke=1, fill=0)
+        canvas.drawCentredString(pmid.x, pmid.y, "Work Week")
+
+        canvas.restoreState()
+        pass
+
 class Monthly(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -458,6 +486,8 @@ class PageFactory:
         'list': ListPage,
         'daily': Daily,
         'weekly': Weekly,
+        'workweek': WorkWeek,
+        'work': WorkWeek,
         'monthly': Monthly,
         'month': Monthly,
     }
