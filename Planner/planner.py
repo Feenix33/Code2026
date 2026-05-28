@@ -11,31 +11,22 @@ Eight is
 
 
 TODO:
-- daily
-xx split format
-xx lines no lines
-xx line style dots or dash
-xx start time
-xx increment 30 or 60 minutes
-xx hours right or left
-xx leading zeros in hours
-xx controls for all the above
-xx convert to new header formatter
-
 - title font size
 - bold title
-- weekly two page spread
-- weekly horizontal 5-day
-- read from file
+- weekly horizontal 5-day (this needs additional rotation?)
 - monthly calendar
 - yearly
 - dots page
+- hex page
 - image page
 - some default icons w/on/off control
 - dice page
 - cut line
 - change font function
 - organize the colors
+- monthly tracker (+fun formats?)
+- grid w/column headings and row number (left or right)
+- grid landscape w/column headings
 
 """
 
@@ -61,20 +52,85 @@ class Point:
     x: float
     y: float
 
+def parse_date_value(val):
+    """Parse a date-like value into a datetime.date.
+
+    Accepts datetime.date, datetime.datetime, or a string in a variety
+    of common formats. Raises ValueError if parsing fails.
+    """
+    if isinstance(val, datetime.date) and not isinstance(val, datetime.datetime):
+        return val
+    if isinstance(val, datetime.datetime):
+        return val.date()
+    if isinstance(val, str):
+        s = val.strip()
+        # Normalize common trailing punctuation
+        s = s.strip().rstrip('.,')
+        # Handle m/d, m/d/yy, mm/dd/yy, mm/dd/yyyy and variants where year is optional
+        # Accept any non-digit separator (/, -, ., space)
+        mmdy = re.match(r'^(?P<m>\d{1,2})\D+(?P<d>\d{1,2})(?:\D+(?P<y>\d{2,4}))?$', s)
+        if mmdy:
+            mm = int(mmdy.group('m'))
+            dd = int(mmdy.group('d'))
+            ygrp = mmdy.group('y')
+            if ygrp is None or ygrp == '':
+                year = datetime.date.today().year
+            else:
+                if len(ygrp) == 2:
+                    year = 2000 + int(ygrp)
+                else:
+                    year = int(ygrp)
+            try:
+                return datetime.date(year, mm, dd)
+            except Exception:
+                # fall through to other parsing attempts
+                pass
+
+        # Try ISO format first
+        try:
+            return datetime.date.fromisoformat(s)
+        except Exception:
+            pass
+
+        # Try a list of common formats
+        fmts = [
+            '%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y', '%d/%m/%Y',
+            '%m-%d-%Y', '%m/%d/%Y', '%b %d %Y', '%b %d, %Y',
+            '%B %d %Y', '%B %d, %Y', '%b%d%Y', '%d %b %Y', '%d %B %Y'
+        ]
+        for fmt in fmts:
+            try:
+                return datetime.datetime.strptime(s, fmt).date()
+            except Exception:
+                continue
+
+        # YYYYMMDD
+        m = re.match(r'^(?P<y>\d{4})(?P<m>\d{2})(?P<d>\d{2})$', s)
+        if m:
+            return datetime.date(int(m.group('y')), int(m.group('m')), int(m.group('d')))
+
+        # Try python-dateutil if available for more fuzzy parsing
+        try:
+            from dateutil import parser as _parser
+            return _parser.parse(s).date()
+        except Exception:
+            pass
+
+    raise ValueError(f"Unrecognized date format: {val}")
+
 def to_reportlab_color(val):
     if not isinstance(val, str):
         return val
     
-    clean_val = val.replace('colors.','').strip().lower()
-    if clean_val.startswith('#') or clean_val.startswith('#'):
+    clean_val = val.replace('colors.', '').strip().lower()
+    if clean_val.startswith('#'):
         return colors.HexColor(clean_val)
-    try: # handle named colors
-        #print (f"Trying to convert color value '{val}' to a ReportLab color")
+    try:  # handle named colors
         return getattr(colors, clean_val, colors.yellowgreen)
     except AttributeError:
-        print (f"ValueError(Unknown color: {val} using black")
+        print(f"ValueError(Unknown color: {val} using black")
         return colors.black
-    
+
 class Page(ABC):
     mid = Point(0,0) # mid.x, mid.y for center of page
     max = Point(0,0) # max.x, max.y for top right corner of page
@@ -100,7 +156,7 @@ class Page(ABC):
     CONVERTERS = {
         'colorFrame': to_reportlab_color,
         'colorGrid': to_reportlab_color,
-        'date': lambda v: datetime.datetime.strptime(v, '%Y-%m-%d').date(),
+        'date': parse_date_value,
         'daystart': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
         'startTime': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
         'endTime': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
@@ -276,7 +332,8 @@ class Daily(Page):
         
     def draw(self, canvas):
         today = getattr(self, 'date', datetime.date.today())
-        strLeft, strCenter, strRight = dailyHeader(today, formatStr=getattr(self, 'format', "ddmmm++yyyy"))
+        #strLeft, strCenter, strRight = dailyHeader(today, formatStr=getattr(self, 'format', "ddmmm++yyyy"))
+        strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'format', "%b %d\t\t%a"))
         time_cur = getattr(self, 'startTime', datetime.time(7, 30))
         time_inc = getattr(self, 'timeInc', 30) # minutes
         end_time = getattr(self, 'endTime', datetime.time(23, 0))
@@ -325,7 +382,8 @@ class Weekly(Page):
         self.title = getattr(self, 'title', 'Weekly Planner')
 
     def drawWeeklyFrames(self, canvas, isWeekend=False):
-        canvas.setStrokeColor(colors.red)
+        lineColor = getattr(self, 'colorGrid', colors.lightgrey)
+        canvas.setStrokeColor(lineColor)
         canvas.rect(0, 0, Page.max.x, Page.max.y)
         canvas.line(0, Page.max.y/3, Page.max.x, Page.max.y/3)
         canvas.line(0, 2*Page.max.y/3, Page.max.x, 2*Page.max.y/3)
@@ -334,7 +392,6 @@ class Weekly(Page):
 
     def draw(self, canvas):
         isWeekend = getattr(self, 'weekend', False)
-        isWeekend = True
         self.drawWeeklyFrames(canvas, isWeekend)
         formatStr = getattr(self, 'format', "%b%d\t%a")
 
@@ -343,7 +400,13 @@ class Weekly(Page):
         canvas.setFont(fontName, fontSize)
         
         lineHt = self.fontsize * 1.25
-        dayNum = datetime.date.today()
+        dayVal = getattr(self, 'date', datetime.date.today())
+        #print(f"Weekly page with date {dayVal} and format '{formatStr}'")
+        try:
+            dayNum = parse_date_value(dayVal)
+        except Exception as e:
+            print(f"Warning: couldn't parse date '{dayVal}': {e}")
+            dayNum = datetime.date.today()
         theDay = getMonday(dayNum)
         if isWeekend:
             theDay = theDay + datetime.timedelta(days=3)
@@ -375,6 +438,16 @@ class Weekly(Page):
 
         pass
 
+class Monthly(Page):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def draw(self, canvas):
+        dw = Page.max.x / 7
+        for i in range(1, 7):
+            canvas.line(i*dw, 0, i*dw, Page.max.y)
+        pass
+
 class PageFactory:
     _registry = {
         'blank': BlankPage,
@@ -385,6 +458,8 @@ class PageFactory:
         'list': ListPage,
         'daily': Daily,
         'weekly': Weekly,
+        'monthly': Monthly,
+        'month': Monthly,
     }
 
     @classmethod
@@ -590,7 +665,7 @@ def dayString(date, format="ddmmmyyyy"):
     result = pattern.sub(lambda m: token_map[m.group(1)], format)
     return result
 
-def dailyHeader(date, formatStr="+ddmmmyy+"):
+def OLDdailyHeader(date, formatStr="+ddmmmyy+"):
     """
     Parse a date and format string to return three strings: left, center, right.
     
@@ -700,7 +775,10 @@ def buildDateHeader(date, formatStr="\t%d%b%y\t"):
     datetime.strftime directives.
     """
     if isinstance(date, str):
-        date = datetime.datetime.fromisoformat(date).date()
+        try:
+            date = parse_date_value(date)
+        except Exception:
+            date = datetime.datetime.fromisoformat(date).date()
     elif isinstance(date, datetime.datetime):
         date = date.date()
     elif not isinstance(date, datetime.date):
@@ -719,7 +797,10 @@ def buildDateHeader(date, formatStr="\t%d%b%y\t"):
 def getMonday(date, dayOffset=0):
     """Given a date, return the Monday of that week with an optional day offset."""
     if isinstance(date, str):
-        date = datetime.datetime.fromisoformat(date).date()
+        try:
+            date = parse_date_value(date)
+        except Exception:
+            date = datetime.datetime.fromisoformat(date).date()
     elif isinstance(date, datetime.datetime):
         date = date.date()
     elif not isinstance(date, datetime.date):
@@ -733,45 +814,31 @@ def getMonday(date, dayOffset=0):
     
     return target_date
 
-def test_dailyHeader():
-    test_date = datetime.date(2026, 5, 11)  # Monday, May 11, 2026
-    
-    test_cases = [
-        {
-            'formatStr': "+ddmmmyy+",
-            'expected': ("", "11May26", "")
-        },
-        {
-            'formatStr': "++ddmmmyy",
-            'expected': ("", "", "11May26")
-        },
-        {
-            'formatStr': "ddmmmyy++",
-            'expected': ("11May26", "", "")
-        },
-        {
-            'formatStr': "w dd mmm yyyy",
-            'expected': ("M 11 May 2026", "", "")
-        },
-        {
-            'formatStr': "www+dd mmm+www",
-            'expected': ("Mon", "11 May", "Mon")
-        }
+
+def TEST_parse_date_value():
+    today_year = datetime.date.today().year
+    cases = [
+        ("5/18", datetime.date(today_year, 5, 18)),
+        ("05/18", datetime.date(today_year, 5, 18)),
+        ("5/18/26", datetime.date(2026, 5, 18)),
+        ("05/18/2026", datetime.date(2026, 5, 18)),
+        ("5-18", datetime.date(today_year, 5, 18)),
+        ("5.18", datetime.date(today_year, 5, 18)),
     ]
-    
-    for i, test_case in enumerate(test_cases):
-        formatStr = test_case['formatStr']
-        expected_left, expected_center, expected_right = test_case['expected']
-        
-        left, center, right = dailyHeader(test_date, formatStr)
-        print(f"Test {i+1}: date {test_date} format '{formatStr}': left='{left}', center='{center}', right='{right}'")
-        
-        assert left == expected_left, f"Test {i+1} FAILED: left expected '{expected_left}', got '{left}'"
-        assert center == expected_center, f"Test {i+1} FAILED: center expected '{expected_center}', got '{center}'"
-        assert right == expected_right, f"Test {i+1} FAILED: right expected '{expected_right}', got '{right}'"
-        print(f"  ✓ Test {i+1} passed")
-    
-    print(f"All {len(test_cases)} tests passed!")
+
+    for s, expected in cases:
+        parsed = parse_date_value(s)
+        print(f"parse_date_value('{s}') -> {parsed}")
+        assert parsed == expected, f"Expected {expected} for '{s}', got {parsed}"
+
+    # invalid date should raise
+    try:
+        parse_date_value("13/40")
+        raise AssertionError("parse_date_value('13/40') should have raised")
+    except ValueError:
+        print("parse_date_value('13/40') correctly raised ValueError")
+
+    print("All parse_date_value tests passed!")
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
@@ -780,7 +847,7 @@ def main():
     config = None
     outputFilename = 'Planner.pdf'
 
-    #test_dailyHeader()
+    #TEST_parse_date_value()
     booklet = Planner(nameOut=outputFilename)
     booklet.readDescription('input.txt')
     #booklet.echoConfig()
