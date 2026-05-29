@@ -29,6 +29,14 @@ TODO:
 - grid w/column headings and row number (left or right)
 - grid landscape w/column headings
 
+Potential common attributes:
+spacing
+Line style (dash, dotted)
+draw flags for line and frame
+xmargin y margin
+color Font
+title font, size, color
+
 """
 
 import argparse
@@ -133,19 +141,27 @@ def to_reportlab_color(val):
         return colors.black
 
 class Page(ABC):
+    DEFAULT_colorFrame = None
+    DEFAULT_colorGrid = colors.lightgrey
+
     mid = Point(0,0) # mid.x, mid.y for center of page
     max = Point(0,0) # max.x, max.y for top right corner of page
     fontName = "Courier" # "Helvetica" "Times-Roman"
     
     def __init__(self, **kwargs):
         kwargs = self._convert_types(kwargs)
-
-        # Handle defaults
+        self.colorFrame = kwargs.pop('colorFrame', self.DEFAULT_colorFrame)
+        self.colorGrid = kwargs.pop('colorGrid', self.DEFAULT_colorGrid)
+        # Common attributes for all pages
         self.title = kwargs.pop('title', None)
-        if 'fontsize' in kwargs:
-            self.fontsize = int(kwargs.pop('fontsize'))
-        else:
-            self.fontsize = 10
+        self.date = kwargs.pop('date', datetime.date.today())
+        # font settings
+        self.fontsize = int(kwargs.pop('fontsize', 10))
+        self.fontName = kwargs.pop('fontName', Page.fontName)
+        self.colorFont = kwargs.pop('colorFont', colors.black)
+        # margins (points)
+        self.xMargin = kwargs.pop('xMargin', 10)
+        self.yMargin = kwargs.pop('yMargin', 10)
         if 'drawFrame' in kwargs:
             self.drawFrame = kwargs.pop('drawFrame')
         else:
@@ -157,6 +173,7 @@ class Page(ABC):
     CONVERTERS = {
         'colorFrame': to_reportlab_color,
         'colorGrid': to_reportlab_color,
+        'colorFont': to_reportlab_color,
         'date': parse_date_value,
         'daystart': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
         'startTime': lambda v: datetime.datetime.strptime(v, '%H:%M').time(),
@@ -203,9 +220,7 @@ class Page(ABC):
         canvas.translate(corner.x, corner.y)
 
         #frame drawing logic
-        drawFrame = getattr(self, 'drawFrame', True)
-        colorFrame = getattr(self, 'colorFrame', None)
-        if drawFrame and colorFrame is not None:
+        if self.drawFrame and self.colorFrame is not None:
             canvas.setStrokeColor(self.colorFrame)
             canvas.rect(0,0, Page.max.x, Page.max.y)
         
@@ -240,9 +255,9 @@ class WordPage(Page):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
-        fontName = getattr(self, 'fontName', Page.fontName)
+        fontName = self.fontName
         canvas.setFont(fontName, self.fontsize)
-        title = getattr(self, 'title', 'Word Page')
+        title = self.title if self.title is not None else 'Word Page'
         canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
 
 class GridPage(Page):
@@ -282,8 +297,7 @@ class GridPage(Page):
 
     def _draw_grid_lines(self, canvas, spacingX, spacingY):
         """Draw vertical and horizontal grid lines."""
-        color = getattr(self, 'colorGrid', colors.lightgrey)
-        canvas.setStrokeColor(color)
+        canvas.setStrokeColor(self.colorGrid)
         
         for x in range(0, int(Page.max.x), int(spacingX)):
             canvas.line(x, 0, x, Page.max.y)
@@ -297,7 +311,7 @@ class LinesPage(Page):
 
     def draw(self, canvas):
         spacing = getattr(self, 'spacing', 0.25) * inch
-        color = getattr(self, 'colorGrid', colors.lightgrey)
+        color = self.colorGrid
         dash = getattr(self, 'dash', None)
         Page.setDash(self, canvas)
         canvas.setStrokeColor(color)
@@ -305,7 +319,7 @@ class LinesPage(Page):
         yStart = int(Page.max.y)
         #print(f"Lines title: {self.title} with fontsize {self.fontsize} and spacing {spacing}")
         if self.title is not None:
-            fontName = getattr(self, 'fontName', Page.fontName)
+            fontName = self.fontName
             canvas.setFont(fontName, self.fontsize)
             canvas.drawCentredString(Page.mid.x, yStart - (self.fontsize*1.5), self.title)
             yStart -= self.fontsize * 3
@@ -321,8 +335,7 @@ class ListPage(Page):
 
     def draw(self, canvas):
         spacing = getattr(self, 'spacing', 0.25) * inch
-        color = getattr(self, 'colorGrid', colors.lightgrey)
-        canvas.setStrokeColor(color)
+        canvas.setStrokeColor(self.colorGrid)
         checkbox = getattr(self, 'check', 'box') in ['box', 'checkbox', 'square']
 
         yStart = int(Page.max.y)
@@ -347,7 +360,7 @@ class Daily(Page):
         super().__init__(**kwargs)
         
     def draw(self, canvas):
-        today = getattr(self, 'date', datetime.date.today())
+        today = self.date
         #strLeft, strCenter, strRight = dailyHeader(today, formatStr=getattr(self, 'format', "ddmmm++yyyy"))
         strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'format', "%b %d\t\t%a"))
         time_cur = getattr(self, 'startTime', datetime.time(7, 30))
@@ -395,11 +408,11 @@ class Daily(Page):
 class Weekly(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.title = getattr(self, 'title', 'Weekly Planner')
+        if self.title is None:
+            self.title = 'Weekly Planner'
 
     def drawWeeklyFrames(self, canvas, isWeekend=False):
-        lineColor = getattr(self, 'colorGrid', colors.lightgrey)
-        canvas.setStrokeColor(lineColor)
+        canvas.setStrokeColor(self.colorGrid)
         canvas.rect(0, 0, Page.max.x, Page.max.y)
         canvas.line(0, Page.max.y/3, Page.max.x, Page.max.y/3)
         canvas.line(0, 2*Page.max.y/3, Page.max.x, 2*Page.max.y/3)
@@ -411,12 +424,12 @@ class Weekly(Page):
         self.drawWeeklyFrames(canvas, isWeekend)
         formatStr = getattr(self, 'format', "%b%d\t%a")
 
-        fontName = getattr(self, 'fontName', Page.fontName)
-        fontSize = getattr(self, 'fontsize', 7)
+        fontName = self.fontName
+        fontSize = self.fontsize
         canvas.setFont(fontName, fontSize)
         
         lineHt = self.fontsize * 1.25
-        dayVal = getattr(self, 'date', datetime.date.today())
+        dayVal = self.date
         #print(f"Weekly page with date {dayVal} and format '{formatStr}'")
         try:
             dayNum = parse_date_value(dayVal)
@@ -461,12 +474,12 @@ class WorkWeek(Page):
     def draw(self, canvas):
         self.startLandscape(canvas)
         
-        today = getattr(self, 'date', datetime.date.today())
+        today = self.date
         strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'format', "\t%b %d\t"))
         
         ypos = int(Page.max.y) - self.fontsize*1.5
-        xmgn = 2
-        ymgn = 2
+        xmgn = self.xMargin
+        ymgn = self.yMargin
 
         if strLeft != '':
             canvas.drawString(xmgn, ypos, strLeft)
