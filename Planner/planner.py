@@ -212,6 +212,21 @@ class Page(ABC):
         self.draw(canvas)
         canvas.restoreState()
     
+    def startLandscape(self, canvas):
+        canvas.saveState()
+        self.inLandscape = True
+        canvas.translate(Page.mid.x, Page.mid.y)
+        canvas.rotate(90)
+        canvas.translate(-Page.mid.y, -Page.mid.x)
+        Page.mid = Point(Page.mid.y, Page.mid.x)
+        Page.max = Point(Page.max.y, Page.max.x)
+
+    
+    def stopLandscape(self, canvas):
+        canvas.restoreState()
+        Page.mid = Point(Page.mid.y, Page.mid.x)
+        Page.max = Point(Page.max.y, Page.max.x)
+    
 class BlankPage(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -444,26 +459,44 @@ class WorkWeek(Page):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
-        canvas.saveState()
-
-        canvas.translate(Page.mid.x, Page.mid.y)
-        canvas.rotate(90)
-        pmid = Point(Page.mid.y, Page.mid.x)
-        pmax = Point(Page.max.y, Page.max.x)
-        canvas.translate(-Page.mid.y, -Page.mid.x)
-        #canvas.translate(-Page.mid.x, -Page.mid.y)
-        #canvas.translate(Page.mid.x/2, -Page.mid.y/4)
+        self.startLandscape(canvas)
         
+        today = getattr(self, 'date', datetime.date.today())
+        strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'format', "\t%b %d\t"))
+        
+        ypos = int(Page.max.y) - self.fontsize*1.5
+        xmgn = 2
+        ymgn = 2
 
-        canvas.setStrokeColor(getattr(self, 'colorGrid', colors.red))
-        canvas.line(0,0, pmid.x, pmid.y)
-        #canvas.setStrokeColor(colors.green)
-        #canvas.rect(0, 0, pmax.x, pmax.y)
-        canvas.setStrokeColor(colors.navy)
-        canvas.circle(0, pmax.y, 10, stroke=1, fill=0)
-        canvas.drawCentredString(pmid.x, pmid.y, "Work Week")
+        if strLeft != '':
+            canvas.drawString(xmgn, ypos, strLeft)
+        if strCenter != '':
+            canvas.drawCentredString(Page.mid.x, ypos, strCenter)
+        if strRight != '':
+            canvas.drawRightString(Page.max.x - xmgn, ypos, strRight)
+        
+        ypos -= self.fontsize
+        dx = (Page.max.x - 2*xmgn)/5
+        xpos = xmgn
 
-        canvas.restoreState()
+        canvas.setStrokeColor(colors.black)
+        for x in range(6):
+            canvas.line(xpos, ypos, xpos, ymgn)
+            xpos += dx
+        xpos = Page.max.x - xmgn
+        canvas.line(xmgn, ypos, xpos, ypos)
+        canvas.line(xmgn, ymgn, xpos, ymgn)
+
+        ypos -= self.fontsize
+        xpos = xmgn
+        for d in range(5):
+            day = today + datetime.timedelta(days=(d-1))
+            strLeft, strCenter, strRight = buildDateHeader(day, "%d %a")
+            canvas.drawString(xpos, ypos, strLeft)
+            xpos += dx
+            
+  
+        self.stopLandscape(canvas)
         pass
 
 class Monthly(Page):
