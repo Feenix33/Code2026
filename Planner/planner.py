@@ -28,6 +28,7 @@ TODO:
 - monthly tracker (+fun formats?)
 - grid w/column headings and row number (left or right)
 - grid landscape w/column headings
+- alternative rotation for landscape mode
 
 Potential common attributes:
 spacing
@@ -169,6 +170,8 @@ class Page(ABC):
                                       
         for key,value in kwargs.items():
             setattr(self, key, value)
+        
+        self.spacew = reportlab.pdfbase.pdfmetrics.stringWidth(' ', self.fontName, self.fontsize)/2 #half a space width
 
     CONVERTERS = {
         'colorFrame': to_reportlab_color,
@@ -185,6 +188,8 @@ class Page(ABC):
         'dash': lambda v: int(v),
         'drawFrame': lambda v: v.lower() in ['true', '1', 'yes'],
         'drawLines': lambda v: v.lower() in ['true', '1', 'yes'],
+        'forceMon':  lambda v: v.lower() in ['true', '1', 'yes'],
+        'forceMonday':  lambda v: v.lower() in ['true', '1', 'yes'],
     }
 
     def _convert_types(self, params):
@@ -422,7 +427,7 @@ class Weekly(Page):
     def draw(self, canvas):
         isWeekend = getattr(self, 'weekend', False)
         self.drawWeeklyFrames(canvas, isWeekend)
-        formatStr = getattr(self, 'format', "%b%d\t%a")
+        formatStr = getattr(self, 'format', "%b%d\t%w")
 
         fontName = self.fontName
         fontSize = self.fontsize
@@ -473,39 +478,66 @@ class WorkWeek(Page):
 
     def draw(self, canvas):
         self.startLandscape(canvas)
-        
+
         today = self.date
-        strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'format', "\t%b %d\t"))
-        
+
+        if hasattr(self, 'offset'): 
+            today = offsetDate(today, self.offset)
+
+        if getattr(self, "forceMon", False) or getattr(self, "forceMonday", False):
+            today = nextMonday(today)
         ypos = int(Page.max.y) - self.fontsize*1.5
         xmgn = self.xMargin
         ymgn = self.yMargin
-
-        if strLeft != '':
-            canvas.drawString(xmgn, ypos, strLeft)
-        if strCenter != '':
-            canvas.drawCentredString(Page.mid.x, ypos, strCenter)
-        if strRight != '':
-            canvas.drawRightString(Page.max.x - xmgn, ypos, strRight)
-        
-        ypos -= self.fontsize
-        dx = (Page.max.x - 2*xmgn)/5
         xpos = xmgn
+        dx = (Page.max.x - 2*xmgn)/5
 
-        canvas.setStrokeColor(colors.black)
+        if self.title != None:
+            strLeft, strCenter, strRight = buildDateHeader(today, formatStr=self.title)
+            #strLeft, strCenter, strRight = buildDateHeader(today, formatStr=getattr(self, 'title', "\t%b %d\t"))
+
+            if strLeft != '':
+                canvas.drawString(xmgn, ypos, strLeft)
+            if strCenter != '':
+                canvas.drawCentredString(Page.mid.x, ypos, strCenter)
+            if strRight != '':
+                canvas.drawRightString(Page.max.x - xmgn, ypos, strRight)
+            
+            ypos -= self.fontsize
+
+        # draw the grid lines for the five days
+        canvas.setStrokeColor(self.colorGrid)
+        headerBox = getattr(self, "headerBox", False)
+        if headerBox:
+            xpos = xmgn
+            for x in range(5):  
+                canvas.rect(xpos, ypos-self.fontsize*1.5, dx, self.fontsize*1.5)
+                xpos += dx
+
+        # draw the day headers
+        temp = ypos
+        ypos -= self.fontsize * 1.5
+        xpos = xmgn
         for x in range(6):
             canvas.line(xpos, ypos, xpos, ymgn)
             xpos += dx
         xpos = Page.max.x - xmgn
         canvas.line(xmgn, ypos, xpos, ypos)
-        canvas.line(xmgn, ymgn, xpos, ymgn)
+        canvas.line(xmgn, ymgn, xpos, ymgn)  # bottom of grid
 
-        ypos -= self.fontsize
+        ypos = temp
+        ypos -= self.fontsize * 1.2
         xpos = xmgn
+        formatStr = getattr(self, 'format', "%d\t\t%w")
         for d in range(5):
-            day = today + datetime.timedelta(days=(d-1))
-            strLeft, strCenter, strRight = buildDateHeader(day, "%d %a")
-            canvas.drawString(xpos, ypos, strLeft)
+            day = today + datetime.timedelta(days=(d))
+            strLeft, strCenter, strRight = buildDateHeader(day, formatStr=formatStr)
+            if strLeft != '':
+                canvas.drawString(xpos+self.spacew, ypos, strLeft)
+            if strCenter != '':
+                canvas.drawCentredString(xpos+(dx/2), ypos, strCenter)
+            if strRight != '':
+                canvas.drawRightString(xpos+dx-self.spacew, ypos, strRight)
             xpos += dx
             
   
@@ -710,7 +742,7 @@ class Planner:
         if self.keywords != None: self.canvas.setKeywords(self.keywords)
         self.canvas.save()
 
-def dayString(date, format="ddmmmyyyy"):
+def OLDdayString(date, format="ddmmmyyyy"):
     if isinstance(date, datetime.datetime):
         date = date.date()
     elif isinstance(date, str):
@@ -860,15 +892,57 @@ def buildDateHeader(date, formatStr="\t%d%b%y\t"):
     elif not isinstance(date, datetime.date):
         raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
 
+    # Accept literal backslash-t escapes from config files as actual tab separators.
+    formatStr = formatStr.replace('\\t', '\t')
     parts = formatStr.split('\t')
     parts += [''] * (3 - len(parts))
     left_fmt, center_fmt, right_fmt = parts[:3]
 
-    left = date.strftime(left_fmt) if left_fmt else ''
-    center = date.strftime(center_fmt) if center_fmt else ''
-    right = date.strftime(right_fmt) if right_fmt else ''
+    # Support an additional custom token for a single-letter weekday.
+    # Use '%w' in the format string to request the single capital
+    # letter for the day of the week: M=Monday, T=Tuesday, W=Wednesday,
+    # R=Thursday, F=Friday, S=Saturday, U=Sunday.
+    def _format_part(fmt):
+        if not fmt:
+            return ''
+
+        placeholder = '__DOW_LETTER__'
+        replaced = False
+        fmt_for_strftime = fmt
+
+        # Prefer explicit "%w" (user-visible) but also accept bare 'w'
+        if '%w' in fmt_for_strftime:
+            fmt_for_strftime = fmt_for_strftime.replace('%w', placeholder)
+            replaced = True
+        """
+        cme I got rid of this, I don't want this, we want to be able to put w
+        elif 'w' in fmt_for_strftime:
+            fmt_for_strftime = fmt_for_strftime.replace('w', placeholder)
+            replaced = True
+        """
+
+        # Use strftime for the rest of the formatting
+        result = date.strftime(fmt_for_strftime)
+
+        # If we replaced a token, substitute the single-letter weekday
+        if replaced:
+            # date.weekday(): Monday=0 .. Sunday=6
+            dow_map = {0: 'M', 1: 'T', 2: 'W', 3: 'R', 4: 'F', 5: 'S', 6: 'U'}
+            letter = dow_map.get(date.weekday(), '?')
+            result = result.replace(placeholder, letter)
+
+        return result
+
+    left = _format_part(left_fmt)
+    center = _format_part(center_fmt)
+    right = _format_part(right_fmt)
 
     return left, center, right
+
+def nextMonday(today):
+    daysAhead = 0 - today.weekday()
+    if daysAhead < 0: daysAhead += 7
+    return today + datetime.timedelta(days=daysAhead)
 
 def getMonday(date, dayOffset=0):
     """Given a date, return the Monday of that week with an optional day offset."""
@@ -890,6 +964,39 @@ def getMonday(date, dayOffset=0):
     
     return target_date
 
+def offsetDate(aDate, offset):
+    # Scenario 1: Offset is already an integer (add as days)
+    if isinstance(offset, int):
+        return aDate + datetime.timedelta(days=offset)
+    
+    # Scenario 2: Offset is a string that represents a plain integer (e.g., "5")
+    if isinstance(offset, str) and offset.strip().isdigit():
+        return aDate + datetime.timedelta(days=int(offset))
+    
+    # Scenario 3: Offset is a complex string (e.g., "2d 3w")
+    if not isinstance(offset, str):
+        raise TypeError("Offset must be an integer or a string.")
+        
+    total_days = 0
+    
+    # Regex breakdown:
+    # (\d+) looks for one or more digits
+    # \s* allows for optional spaces between the number and the unit
+    # ([a-zA-Z]+) captures the unit letters (e.g., "w", "weeks", "d")
+    matches = re.findall(r'(\d+)\s*([a-zA-Z]+)', offset)
+    
+    for amount_str, unit in matches:
+        amount = int(amount_str)
+        unit = unit.lower()
+        
+        if unit in ['d', 'day', 'days']:
+            total_days += amount
+        elif unit in ['w', 'wk', 'week', 'wks', 'weeks']:
+            total_days += amount * 7
+        else:
+            raise ValueError(f"Unknown time unit found: '{unit}' passed to function offsetDate")
+            
+    return aDate + datetime.timedelta(days=total_days)
 
 def TEST_parse_date_value():
     today_year = datetime.date.today().year
@@ -915,6 +1022,21 @@ def TEST_parse_date_value():
         print("parse_date_value('13/40') correctly raised ValueError")
 
     print("All parse_date_value tests passed!")
+
+def TEST_buildDateHeader_single_letter():
+    # Monday 2026-05-25 should return 'M' using the '%w' token
+    d = datetime.date(2026, 5, 25)
+    left, center, right = buildDateHeader(d, '\t%w\t')
+    print(f"buildDateHeader single-letter -> left:'{left}' center:'{center}' right:'{right}'")
+    assert center == 'M', f"Expected 'M' for 2026-05-25, got '{center}'"
+    # Sunday 2026-05-31 should return 'U'
+    s = datetime.date(2026, 5, 31)
+    _, center2, _ = buildDateHeader(s, '\t%w\t')
+    assert center2 == 'U', f"Expected 'U' for 2026-05-31, got '{center2}'"
+    # Regression: strings read from config files may contain literal backslash-t escapes.
+    _, center3, _ = buildDateHeader(s, '\\t%d')
+    assert center3 == '31', f"Expected '31' for literal escape string, got '{center3}'"
+    print("All buildDateHeader single-letter tests passed!")
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
