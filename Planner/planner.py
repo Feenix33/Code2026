@@ -23,14 +23,21 @@ TODO:
 - some default icons w/on/off control
 - dice page
 - cut line
-- change font function
 - organize the colors
 - monthly tracker (+fun formats?)
-- grid w/column headings and row number (left or right)
+- grid w/column headings and row number (left or right) (spreadsheet)
 - grid landscape w/column headings
 - alternative rotation for landscape mode
+- expense page 
 
-Potential common attributes:
+TODO:
+change font function
+Date pages need consolodated force monday and use offset parameter
+Generic draw title function for all pages
+The calendar pages have a common routine for left, center, right drawing
+
+
+TODO Potential common attributes:
 spacing
 Line style (dash, dotted)
 draw flags for line and frame
@@ -40,10 +47,13 @@ title font, size, color
 
 """
 
-import argparse
-import sys
+# import argparse
+# import sys
 import os
 import datetime
+from datetime import date
+from dateutil import parser
+import calendar
 import re
 import unicodedata
 from reportlab.lib.pagesizes import A4, landscape, letter, portrait
@@ -56,6 +66,7 @@ from reportlab.platypus import Frame, Spacer, Paragraph, PageBreak, Image
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import shlex
+
 
 @dataclass
 class Point:
@@ -140,6 +151,12 @@ def to_reportlab_color(val):
     except AttributeError:
         print(f"ValueError(Unknown color: {val} using black")
         return colors.black
+
+#str2bool =  #lambda v: v.lower() in ['true', '1', 'yes']
+str2bool = lambda v: (
+    v if isinstance(v, bool)
+    else str(v).strip().lower() in {"true", "1", "yes"}
+)
 
 class Page(ABC):
     DEFAULT_colorFrame = None
@@ -260,8 +277,7 @@ class WordPage(Page):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
-        fontName = self.fontName
-        canvas.setFont(fontName, self.fontsize)
+        canvas.setFont(self.fontName, self.fontsize)
         title = self.title if self.title is not None else 'Word Page'
         canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
 
@@ -484,7 +500,7 @@ class WorkWeek(Page):
         if hasattr(self, 'offset'): 
             today = offsetDate(today, self.offset)
 
-        if getattr(self, "forceMon", False) or getattr(self, "forceMonday", False):
+        if getattr(self, "forceMon", False) or getattr(self, "forceMonday", True):
             today = nextMonday(today)
         ypos = int(Page.max.y) - self.fontsize*1.5
         xmgn = self.xMargin
@@ -547,12 +563,56 @@ class WorkWeek(Page):
 class Monthly(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if self.title is None:
+            self.title = "%B %Y"
+        self.doDays = str2bool(getattr(self, 'doDays', True))
 
     def draw(self, canvas):
+        self.startLandscape(canvas)
+        maxy = Page.max.y
+        
+        aday = getMonthStart("2026-07-01")
+        #print (f"aday = {aday} and is weekday {aday.weekday()}")
+
+        strLeft, strCenter, strRight = buildDateHeader(aday, formatStr=self.title)
+        if strLeft != '':
+            canvas.drawString(0+2, maxy-self.fontsize, strLeft)
+        if strCenter != '':
+            canvas.drawCentredString(Page.mid.x, maxy-self.fontsize, strCenter)
+        if strRight != '':
+            canvas.drawRightString(Page.max.x-2, maxy-self.fontsize, strRight)
+        maxy -= self.fontsize*1.75
+
+        canvas.setFont(self.fontName, self.fontsize*0.75)
+        self.fontsize *= 0.6
         dw = Page.max.x / 7
-        for i in range(1, 7):
-            canvas.line(i*dw, 0, i*dw, Page.max.y)
-        pass
+
+        #draw day labels
+        if self.doDays:
+            for i in range(7):
+                dayLabel = calendar.day_abbr[i]
+                canvas.drawCentredString((i+0.5)*dw, maxy, dayLabel)
+            maxy -= self.fontsize * 0.5
+
+        dh = maxy / 5
+
+        for i in range(0, 8):
+            canvas.line(i*dw, 0, i*dw, maxy)
+        for i in range (0, 6):
+            canvas.line(0, i*dh, Page.max.x, i*dh)
+          
+        dayValue = 1
+        onWeekday = 0
+        tgtWeekday = aday.weekday()
+        maxDay = calendar.monthrange(aday.year, aday.month)[1]
+        for i in range (0,5):
+            for j in range(0,7):
+                if onWeekday >= tgtWeekday and dayValue <= maxDay:
+                    canvas.drawString(j*dw+2, maxy - (i*dh) - (self.fontsize), f"{dayValue}")
+                    dayValue += 1
+                onWeekday += 1
+        
+        self.stopLandscape(canvas)
 
 class PageFactory:
     _registry = {
@@ -997,6 +1057,44 @@ def offsetDate(aDate, offset):
             raise ValueError(f"Unknown time unit found: '{unit}' passed to function offsetDate")
             
     return aDate + datetime.timedelta(days=total_days)
+
+def getMonthStart(hint=None) -> date:
+    # Scenario 1: No hint provided -> Return 1st of current month
+    if hint is None:
+        today = date.today()
+        return date(today.year, today.month, 1)
+    
+    # Scenario 2: Hint is already a date (or datetime) object
+    if isinstance(hint, date):
+        return date(hint.year, hint.month, 1)
+    
+    # Scenario 3: Hint is an integer (month number 1-12)
+    if isinstance(hint, int):
+        if not (1 <= hint <= 12):
+            raise ValueError("Month integer must be between 1 and 12.")
+        return date(date.today().year, hint, 1)
+    
+    # Scenario 4: Hint is a string (could be a name, a date format, mm/yy, etc.)
+    if isinstance(hint, str):
+        cleaned_hint = hint.strip()
+        
+        # Guard rail: handle standalone integer strings safely (e.g., "5")
+        if cleaned_hint.isdigit():
+            month_num = int(cleaned_hint)
+            if not (1 <= month_num <= 12):
+                raise ValueError("Month integer string must be between 1 and 12.")
+            return date(date.today().year, month_num, 1)
+            
+        try:
+            # dateutil.parser.parse is incredibly smart. 
+            # default=date.today() ensures missing info (like year) falls back to today.
+            parsed_dt = parser.parse(cleaned_hint, default=date.today())
+            return date(parsed_dt.year, parsed_dt.month, 1)
+        except (ValueError, OverflowError):
+            raise ValueError(f"Could not parse the date hint: '{hint}'")
+
+    raise TypeError("Invalid hint type. Expected None, date, int, or str.")
+
 
 def TEST_parse_date_value():
     today_year = datetime.date.today().year
