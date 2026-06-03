@@ -13,11 +13,9 @@ Eight is
 TODO:
 - title font size
 - bold title
-- weekly horizontal 5-day (this needs additional rotation?)
-- monthly calendar
-- monthly rotated
+- monthly ref
 - yearly
-- dots page
+- generic title handling routine
 - hex page
 - image page
 - some default icons w/on/off control
@@ -326,6 +324,22 @@ class GridPage(Page):
         for y in range(int(Page.max.y), 0, -int(spacingY)):
             canvas.line(0, y, Page.max.x, y)
 
+class DotPage(GridPage):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def draw(self, canvas):
+        spacingX, spacingY = self._calculate_spacing()
+        self._draw_dots(canvas, spacingX, spacingY)
+
+    def _draw_dots(self, canvas, spacingX, spacingY):
+        """Draw dots at grid intersections instead of lines."""
+        canvas.setFillColor(self.colorGrid)
+        dot_radius = 1  # radius of the dots
+        for x in range(0, int(Page.max.x), int(spacingX)):
+            for y in range(0, int(Page.max.y), int(spacingY)):
+                canvas.circle(x, y, dot_radius, stroke=0, fill=1)
+
 class LinesPage(Page):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -628,6 +642,8 @@ class PageFactory:
         'work': WorkWeek,
         'monthly': Monthly,
         'month': Monthly,
+        'dot': DotPage,
+        'dots': DotPage,
     }
 
     @classmethod
@@ -791,7 +807,7 @@ class Planner:
             self.canvas.line(x*inch, 0*inch, x*inch, 8.5*inch)
         self.canvas.restoreState()
 
-    def makePlanner(self, inConfig):
+    def makePlanner(self):
         self.create()
         self.build()
         
@@ -1140,14 +1156,13 @@ def TEST_buildDateHeader_single_letter():
 
 def main():
     #Read command line arguments
-    config = None
     outputFilename = 'Planner.pdf'
 
     #TEST_parse_date_value()
     booklet = Planner(nameOut=outputFilename)
     booklet.readDescription('input.txt')
     #booklet.echoConfig()
-    booklet.makePlanner(config)
+    booklet.makePlanner()
 
 if __name__ == '__main__':
     main()
