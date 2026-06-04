@@ -1,27 +1,21 @@
 """
 Pocket planner 8-pg
 72 points per inch
-
 fonts: Helvetica, Times-Roman, Courier
 
 Eight is 
 7 6 5 4 upside down
 8 1 2 3
 
-
-
 TODO:
-- title font size
 - bold title
 - monthly ref
 - yearly
-- generic title handling routine
 - hex page
 - image page
 - some default icons w/on/off control
 - dice page
 - cut line
-- organize the colors
 - monthly tracker (+fun formats?)
 - grid w/column headings and row number (left or right) (spreadsheet)
 - grid landscape w/column headings
@@ -31,9 +25,7 @@ TODO:
 TODO:
 change font function
 Date pages need consolodated force monday and use offset parameter
-Generic draw title function for all pages
 The calendar pages have a common routine for left, center, right drawing
-
 
 TODO Potential common attributes:
 spacing
@@ -41,8 +33,6 @@ Line style (dash, dotted)
 draw flags for line and frame
 xmargin y margin
 color Font
-title font, size, color
-
 """
 
 # import argparse
@@ -53,18 +43,14 @@ from datetime import date
 from dateutil import parser
 import calendar
 import re
-import unicodedata
-from reportlab.lib.pagesizes import A4, landscape, letter, portrait
+import reportlab
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
-from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-import reportlab.lib.enums 
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import Frame, Spacer, Paragraph, PageBreak, Image
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import shlex
-
 
 @dataclass
 class Point:
@@ -175,6 +161,9 @@ class Page(ABC):
         self.fontsize = int(kwargs.pop('fontsize', 10))
         self.fontName = kwargs.pop('fontName', Page.fontName)
         self.colorFont = kwargs.pop('colorFont', colors.black)
+        self.titleSize = int(kwargs.pop('titleSize', self.fontsize * 1.5))
+        self.colorTitle = kwargs.pop('colorTitle', self.colorFont)
+        self.formatTitle = kwargs.pop('formatTitle', None)
         # margins (points)
         self.xMargin = kwargs.pop('xMargin', 10)
         self.yMargin = kwargs.pop('yMargin', 10)
@@ -256,11 +245,22 @@ class Page(ABC):
         Page.mid = Point(Page.mid.y, Page.mid.x)
         Page.max = Point(Page.max.y, Page.max.x)
 
-    
     def stopLandscape(self, canvas):
         canvas.restoreState()
         Page.mid = Point(Page.mid.y, Page.mid.x)
         Page.max = Point(Page.max.y, Page.max.x)
+    
+    def drawTitle(self, canvas):
+        if self.title is not None:
+            canvas.setFont(self.fontName, self.titleSize)
+            canvas.setFillColor(self.colorTitle)
+            title_str = self.formatTitle.format(date=self.date) if self.formatTitle else self.title
+            #print (f"Title string: '{title_str}' with format '{self.formatTitle}'")
+            #canvas.drawCentredString(Page.mid.x, Page.max.y - self.yMargin - self.titleSize, title_str)
+            canvas.drawCentredString(Page.mid.x, Page.max.y - self.titleSize, title_str)
+            canvas.setFillColor(self.colorFont)  # reset to normal font color for body
+            return int(self.titleSize *1.25)  # return height of title area for spacing
+        return 0
     
 class BlankPage(Page):
     def __init__(self, **kwargs):
@@ -277,7 +277,8 @@ class WordPage(Page):
     def draw(self, canvas):
         canvas.setFont(self.fontName, self.fontsize)
         title = self.title if self.title is not None else 'Word Page'
-        canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
+        #canvas.drawCentredString(Page.mid.x, Page.mid.y, title)
+        Page.drawTitle(self, canvas)
 
 class GridPage(Page):
     def __init__(self, **kwargs):
@@ -286,6 +287,8 @@ class GridPage(Page):
 
     def draw(self, canvas):
         #print(f"Drawing grid page with title {self.title} and drawFrame={self.drawFrame}")
+        self.max = Point(Page.max.x, Page.max.y)
+        self.max.y -= Page.drawTitle(self, canvas) # adjust max.y to account for title height
         spacingX, spacingY = self._calculate_spacing()
         self._draw_grid_lines(canvas, spacingX, spacingY)
 
@@ -310,25 +313,27 @@ class GridPage(Page):
             return spacingY, spacingY
         
         # Both set: calculate independently
-        spacingX = Page.max.x / gridX
-        spacingY = Page.max.y / gridY
+        spacingX = self.max.x / gridX
+        spacingY = self.max.y / gridY
         return spacingX, spacingY
 
     def _draw_grid_lines(self, canvas, spacingX, spacingY):
         """Draw vertical and horizontal grid lines."""
         canvas.setStrokeColor(self.colorGrid)
         
-        for x in range(0, int(Page.max.x), int(spacingX)):
-            canvas.line(x, 0, x, Page.max.y)
+        for x in range(0, int(self.max.x), int(spacingX)):
+            canvas.line(x, 0, x, self.max.y)
         
-        for y in range(int(Page.max.y), 0, -int(spacingY)):
-            canvas.line(0, y, Page.max.x, y)
+        for y in range(int(self.max.y), 0, -int(spacingY)):
+            canvas.line(0, y, self.max.x, y)
 
 class DotPage(GridPage):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def draw(self, canvas):
+        self.max = Point(Page.max.x, Page.max.y)
+        self.max.y -= Page.drawTitle(self, canvas) # adjust max.y to account for title height
         spacingX, spacingY = self._calculate_spacing()
         self._draw_dots(canvas, spacingX, spacingY)
 
@@ -336,8 +341,8 @@ class DotPage(GridPage):
         """Draw dots at grid intersections instead of lines."""
         canvas.setFillColor(self.colorGrid)
         dot_radius = 1  # radius of the dots
-        for x in range(0, int(Page.max.x), int(spacingX)):
-            for y in range(0, int(Page.max.y), int(spacingY)):
+        for x in range(0, int(self.max.x), int(spacingX)):
+            for y in range(0, int(self.max.y), int(spacingY)):
                 canvas.circle(x, y, dot_radius, stroke=0, fill=1)
 
 class LinesPage(Page):
@@ -353,12 +358,8 @@ class LinesPage(Page):
         
         yStart = int(Page.max.y)
         #print(f"Lines title: {self.title} with fontsize {self.fontsize} and spacing {spacing}")
-        if self.title is not None:
-            fontName = self.fontName
-            canvas.setFont(fontName, self.fontsize)
-            canvas.drawCentredString(Page.mid.x, yStart - (self.fontsize*1.5), self.title)
-            yStart -= self.fontsize * 3
-
+        yStart -= 2*Page.drawTitle(self, canvas) # adjust yStart to account for title height
+ 
         for y in range(int(yStart), 0, -int(spacing)):
             canvas.line(0, y, Page.max.x, y)
 
@@ -374,10 +375,7 @@ class ListPage(Page):
         checkbox = getattr(self, 'check', 'box') in ['box', 'checkbox', 'square']
 
         yStart = int(Page.max.y)
-        if self.title is not None:
-            canvas.setFont(self.fontName, self.fontsize)
-            canvas.drawCentredString(Page.mid.x, yStart - (self.fontsize*1.5), self.title)
-            yStart -= self.fontsize * 3
+        yStart -= 2*Page.drawTitle(self, canvas) # adjust yStart to account for title height
 
         checkbox_size = self.fontsize * 0.8
         margin = int (checkbox_size * 0.5)
@@ -818,139 +816,6 @@ class Planner:
         if self.keywords != None: self.canvas.setKeywords(self.keywords)
         self.canvas.save()
 
-def OLDdayString(date, format="ddmmmyyyy"):
-    if isinstance(date, datetime.datetime):
-        date = date.date()
-    elif isinstance(date, str):
-        date = datetime.datetime.fromisoformat(date).date()
-    elif not isinstance(date, datetime.date):
-        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
-
-    day_name = date.strftime("%A")
-    month_name = date.strftime("%B")
-    month_abbrev = date.strftime("%b")
-    day_num = date.day
-
-    token_map = {
-        'l': day_name.capitalize(),
-        'lll': day_name[:3].capitalize(),
-        'LLL': day_name[:3].upper(),
-        'dd': f"{day_num:02d}",
-        'd': str(day_num),
-        'mmmm': month_name,
-        'mmm': month_abbrev.capitalize(),
-        'MMM': month_abbrev.upper(),
-        'yy': date.strftime("%y"),
-        'yyyy': date.strftime("%Y"),
-    }
-
-    # Use regex to replace tokens without affecting replacements
-    pattern = re.compile(r'\b(' + '|'.join(re.escape(token) for token in sorted(token_map, key=len, reverse=True)) + r')\b')
-    result = pattern.sub(lambda m: token_map[m.group(1)], format)
-    return result
-
-def OLDdailyHeader(date, formatStr="+ddmmmyy+"):
-    """
-    Parse a date and format string to return three strings: left, center, right.
-    
-    Format codes:
-    - d: day of month (1-31)
-    - dd: day of month (01-31)
-    - m: month number (1-12)
-    - mm: month number (01-12)
-    - mmm: month abbreviation (Jan-Dec, first letter capitalized)
-    - MMM: month abbreviation (JAN-DEC, all caps)
-    - mmmm: month name (January-December, first letter capitalized)
-    - w: day of week single letter (M, T, W, R for Thu, F, J for Sat, S)
-    - www: day of week abbreviation (Mon-Sun, first letter capitalized)
-    - WWW: day of week abbreviation (MON-SUN, all caps)
-    - wwww: day of week full name (Monday-Sunday)
-    - n: week number (ISO week starting Monday, 1-53)
-    - nn: week number (01-53)
-    - yyyy: 4-digit year (e.g., 2026)
-    - yy: 2-digit year (e.g., 26)
-    - +: separator between left, center, right fields
-    
-    The + character separates left, center, and right fields:
-    - "+ddmmmyy+" results in left='', center='ddmmmyy', right=''
-    - "++ddmmmyy" results in left='', center='', right='ddmmmyy'
-    - "ddmmmyy++" results in left='ddmmmyy', center='', right=''
-    
-    Returns:
-        tuple: (leftStr, centerStr, rightStr)
-    """
-    if isinstance(date, str):
-        date = datetime.datetime.fromisoformat(date).date()
-    elif isinstance(date, datetime.datetime):
-        date = date.date()
-    elif not isinstance(date, datetime.date):
-        raise TypeError("date must be a datetime.date, datetime.datetime, or ISO date string")
-    
-    # Split format string by '+' to get left, center, right
-    parts = formatStr.split('+')
-    leftFmt = parts[0] if len(parts) > 0 else ''
-    centerFmt = parts[1] if len(parts) > 1 else ''
-    rightFmt = parts[2] if len(parts) > 2 else ''
-    
-    def replaceTokens(fmt):
-        if not fmt:
-            return ''
-        
-        day_name = date.strftime("%A")
-        month_name = date.strftime("%B")
-        month_abbrev = date.strftime("%b")
-        day_num = date.day
-        month_num = date.month
-        year_num = date.year
-        
-        # Day of week single letter codes
-        dow_single_map = {
-            'Monday': 'M',
-            'Tuesday': 'T',
-            'Wednesday': 'W',
-            'Thursday': 'R',
-            'Friday': 'F',
-            'Saturday': 'J',
-            'Sunday': 'S'
-        }
-        dow_single = dow_single_map.get(day_name, day_name[0].upper())
-        
-        # Day of week abbreviation
-        dow_abbrev = day_name[:3]
-        
-        # Get week number (ISO week, week starting Monday)
-        iso_calendar = date.isocalendar()
-        week_num = iso_calendar[1]
-        
-        token_map = {
-            'wwww': day_name,
-            'WWW': day_name.upper(),
-            'www': dow_abbrev.capitalize(),
-            'w': dow_single,
-            'mmmm': month_name,
-            'MMM': month_abbrev.upper(),
-            'mmm': month_abbrev.capitalize(),
-            'mm': f"{month_num:02d}",
-            'm': str(month_num),
-            'yyyy': str(year_num),
-            'yy': date.strftime("%y"),
-            'dd': f"{day_num:02d}",
-            'd': str(day_num),
-            'nn': f"{week_num:02d}",
-            'n': str(week_num),
-        }
-        
-        # Sort by token length descending to match longer tokens first
-        pattern = re.compile('(' + '|'.join(re.escape(token) for token in sorted(token_map.keys(), key=len, reverse=True)) + ')')
-        result = pattern.sub(lambda m: token_map[m.group(1)], fmt)
-        return result
-    
-    leftStr = replaceTokens(leftFmt)
-    centerStr = replaceTokens(centerFmt)
-    rightStr = replaceTokens(rightFmt)
-    
-    return leftStr, centerStr, rightStr
-
 def buildDateHeader(date, formatStr="\t%d%b%y\t"):
     """Build a date header with left, center, and right fields.
 
@@ -1111,57 +976,34 @@ def getMonthStart(hint=None) -> date:
 
     raise TypeError("Invalid hint type. Expected None, date, int, or str.")
 
-
-def TEST_parse_date_value():
-    today_year = datetime.date.today().year
-    cases = [
-        ("5/18", datetime.date(today_year, 5, 18)),
-        ("05/18", datetime.date(today_year, 5, 18)),
-        ("5/18/26", datetime.date(2026, 5, 18)),
-        ("05/18/2026", datetime.date(2026, 5, 18)),
-        ("5-18", datetime.date(today_year, 5, 18)),
-        ("5.18", datetime.date(today_year, 5, 18)),
-    ]
-
-    for s, expected in cases:
-        parsed = parse_date_value(s)
-        print(f"parse_date_value('{s}') -> {parsed}")
-        assert parsed == expected, f"Expected {expected} for '{s}', got {parsed}"
-
-    # invalid date should raise
-    try:
-        parse_date_value("13/40")
-        raise AssertionError("parse_date_value('13/40') should have raised")
-    except ValueError:
-        print("parse_date_value('13/40') correctly raised ValueError")
-
-    print("All parse_date_value tests passed!")
-
-def TEST_buildDateHeader_single_letter():
-    # Monday 2026-05-25 should return 'M' using the '%w' token
-    d = datetime.date(2026, 5, 25)
-    left, center, right = buildDateHeader(d, '\t%w\t')
-    print(f"buildDateHeader single-letter -> left:'{left}' center:'{center}' right:'{right}'")
-    assert center == 'M', f"Expected 'M' for 2026-05-25, got '{center}'"
-    # Sunday 2026-05-31 should return 'U'
-    s = datetime.date(2026, 5, 31)
-    _, center2, _ = buildDateHeader(s, '\t%w\t')
-    assert center2 == 'U', f"Expected 'U' for 2026-05-31, got '{center2}'"
-    # Regression: strings read from config files may contain literal backslash-t escapes.
-    _, center3, _ = buildDateHeader(s, '\\t%d')
-    assert center3 == '31', f"Expected '31' for literal escape string, got '{center3}'"
-    print("All buildDateHeader single-letter tests passed!")
-
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
+def processArgs(args):
+    if args is None:
+        args = sys.argv[1:]
+
+    # Ignore options beginning with '-'
+    filenames = [arg for arg in args if not arg.startswith("-")]
+
+    input_file = "input.txt"
+    output_file = "Planner.pdf"
+
+    if len(filenames) >= 1:
+        input_file = filenames[0]
+
+    if len(filenames) >= 2:
+        output_file = filenames[1]   
+    # Ensure output filename has .pdf extension
+    if not output_file.lower().endswith('.pdf'):
+        output_file += '.pdf'
+    
+    return input_file, output_file
 
 def main():
-    #Read command line arguments
-    outputFilename = 'Planner.pdf'
+    import sys
+    inputFilename, outputFilename = processArgs(sys.argv[1:])
 
-    #TEST_parse_date_value()
     booklet = Planner(nameOut=outputFilename)
-    booklet.readDescription('input.txt')
-    #booklet.echoConfig()
+    booklet.readDescription(inputFilename)
     booklet.makePlanner()
 
 if __name__ == '__main__':
