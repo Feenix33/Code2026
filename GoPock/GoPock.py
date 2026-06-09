@@ -9,7 +9,7 @@ from reportlab.pdfgen.canvas import Canvas
 import reportlab.lib.enums
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Frame, Spacer, Paragraph, PageBreak, Image
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
 @dataclass
@@ -17,20 +17,59 @@ class Point:
     x: float
     y: float
 
+@dataclass
+class Font:
+    name: str = "Helvetica"
+    size: int = 12
+    color: str = "black"
 
+@dataclass
 class Style:
-    def __init__(self, parent=None, **values):
-        self.parent = parent
-        self.values = values
+    font : Font = field(default_factory=Font)
+    margin: int = 4
+    drawFrame: bool = True
+    colorFrame: colors.Color = colors.blue
+    colorGrid: colors.Color = colors.lightgrey
 
-    def get(self, name):
-        if name in self.values:
-            return self.values[name]
+@dataclass
+class BookletStyle:
+    margin: int = 10
+    nameOut: str = "GoPock.pdf"
+    
+@dataclass
+class PageSpec:
+    page_type: str
+    attrs: dict
+    line_number: int
 
-        if self.parent:
-            return self.parent.get(name)
+class PageFactory:
+    # PAGE_TYPES = {
+    #     "daily": DailyPage,
+    #     "weekly": WeeklyPage,
+    #     "monthly": MonthlyPage,
+    #     "list": ListPage,
+    # }
+    _registry = {}
 
-        raise KeyError(name)
+    @classmethod
+    def register(cls, keyword):
+        def decorator(page_class):
+            cls._registry[keyword] = page_class
+            return page_class
+        return decorator
+    
+    @classmethod
+    def create(cls, page_type, **attrs):
+        page_class = cls._registry.get(page_type)
+        if page_class is None:
+            print(
+                f"WARNING: Unknown page type '{page_type}'"
+            )
+            return None
+        return page_class(**attrs)
+
+  
+
 
 class Page(ABC):
     DEFAULT_colorFrame = colors.blue
@@ -38,21 +77,24 @@ class Page(ABC):
     mid = Point(0,0) # mid.x, mid.y for center of page
     max = Point(0,0) # max.x, max.y for top right corner of page
  
-    def __init__(self, booklet, style=None, **kwargs):
-        #kwargs = self._convert_types(kwargs)
-        self.book = booklet
 
-        self.style = Style(
-            parent=booklet.style
-        )
+    def __init__(self):
+        self.book = None
+        self.overrides = {}
 
-        if style:
-            self.style.values.update(style)
-        
- 
     @abstractmethod
     def draw(self, canvas):
         pass
+
+    def get_style(self, path):
+        # Page override?
+        if path in self.overrides:
+            return self.overrides[path]
+        # Otherwise use book default
+        return get_nested_attr(
+            self.book.style,
+            path
+        )
 
     def render(self, canvas, rotate, corner):
         #print (f"Rendering page with title {self.title} at corner {corner} with rotate={rotate}")
@@ -65,8 +107,8 @@ class Page(ABC):
         canvas.translate(corner.x, corner.y)
 
         #frame drawing logic
-        if self.style.get("drawFrame") and self.style.get("colorFrame") is not None:
-            canvas.setStrokeColor(self.style.get("colorFrame"))
+        if self.get_style("drawFrame") and self.get_style("colorFrame") is not None:
+            canvas.setStrokeColor(self.get_style("colorFrame"))
             canvas.rect(0,0, Page.max.x, Page.max.y)
         
         self.draw(canvas)
@@ -102,10 +144,10 @@ class Page(ABC):
             spaceAfter=spaceAfter,
             leading=leading)
 
-
+@PageFactory.register("word")
 class PageWord(Page):
-    def __init__(self, booklet, style=None, title="Generic PageWord", **kwargs):
-        super().__init__(booklet, style, **kwargs)
+    def __init__(self, title="Generic Word Page", **kwargs):
+        super().__init__()
         self.title = title
 
 
@@ -129,31 +171,22 @@ class TextPage(Page):
 
 class Booklet:
     def __init__(self):
-        self.style = Style(
-            title="Default Title",
-            drawFrame=False,
-            colorFrame=colors.black,
-            colorGrid=colors.lightgrey,
-            margin = 10,
-            fontSize = 10,
-            fontName = "Helvetica",
-        )
         self.docSize = landscape(letter) 
-        self.nameOut = "GoPock.pdf"
+        # self.nameOut = "GoPock.pdf"
+        self.style = Style()
+        self.config = BookletStyle()
         self.pages = []
         #print ("Booklet initialized")
         pass
 
     def add_page(self, page=None):
-        if page is None:
-            page = Page(self)
-
+        page.book = self
         self.pages.append(page)
         return page
   
     def computePaneCorners(self):
         width, height = self.docSize
-        margin = self.style.get("margin")
+        margin = self.config.margin
         # 6 5 4 3 upside down
         # 7 0 1 2
         fWidth = (width / 4) - margin*2
@@ -170,63 +203,255 @@ class Booklet:
     def render(self):
         #print ("Rendering the booklet")
 
-        self.corners = self.computePaneCorners()
-        margin = self.style.get("margin")
+        corners = self.computePaneCorners()
+        margin = self.config.margin
         Page.max.x = (self.docSize[0] - 8*margin) / 4
         Page.max.y = (self.docSize[1] - 4*margin) / 2
         Page.mid.x = Page.max.x / 2
         Page.mid.y = Page.max.y / 2
-        self.canvas = Canvas(self.nameOut, pagesize=self.docSize)
+        self.canvas = Canvas(self.config.nameOut, pagesize=self.docSize)
         #self.drawFoldlines()
         n = 0
         for page in self.pages:
             if page is not None:
                 #print (f"Rendering page {n}")
-                page.render(self.canvas, rotate=(n not in [0,1,2,3]), corner=self.corners[n%4])
+                page.render(self.canvas, rotate=(n not in [0,1,2,3]), corner=corners[n%4])
             n += 1
         
         self.canvas.save()
 
+
+
+def set_nested_attr(obj, path, value):
+    """
+    set_nested_attr(style, "font.size", 10)
+    becomes:
+    style.font.size = 10
+    """
+    parts = path.split(".")
+    current = obj
+    for part in parts[:-1]:
+        current = getattr(current, part)
+    setattr(current, parts[-1], value)
+
+def build_book(book, specs, page_factory):
+    for spec in specs:
+        #
+        # Handle defaults
+        #
+        if spec.page_type == "defaults":
+            for key, value in spec.attrs.items():
+                try:
+                    set_nested_attr(
+                        book.style,
+                        key,
+                        value
+                    )
+                except AttributeError:
+                    print(
+                        f"WARNING line "
+                        f"{spec.line_number}: "
+                        f"unknown style attribute "
+                        f"'{key}'"
+                    )
+            continue
+
+        #
+        # Create page
+        #
+        page = page_factory.create(
+            spec.page_type,
+            **spec.attrs
+        )
+
+        if page is None:
+            print(
+                f"WARNING line "
+                f"{spec.line_number}: "
+                f"unknown page type "
+                f"'{spec.page_type}'"
+            )
+            continue
+        book.add_page(page)
+
+
+#########
+# Utility Functions
+########
+import shlex
+
+def get_nested_attr(obj, path):
+    current = obj
+    for part in path.split("."):
+        #print (f"Accessing attribute '{part}' of object {current}")
+        current = getattr(current, part)
+    return current
+
+def convert_value(value):
+    """Convert strings into int, float, bool when appropriate."""
+
+    value = value.strip()
+
+    if value.lower() == "true":
+        return True
+
+    if value.lower() == "false":
+        return False
+
+    try:
+        return int(value)
+    except ValueError:
+        pass
+
+    try:
+        return float(value)
+    except ValueError:
+        pass
+
+    return value
+
+
+def parse_attributes(text):
+    """
+    Parse:
+        title="Shopping List" font.size=12
+
+    into:
+        {
+            "title": "Shopping List",
+            "font.size": 12
+        }
+    """
+
+    attrs = {}
+    tokens = shlex.split(text)
+
+    for token in tokens:
+        if "=" not in token:
+            continue
+
+        key, value = token.split("=", 1)
+        attrs[key] = convert_value(value)
+    return attrs
+
+##############################
+
+import shlex
+def read_page_specs(filename):
+
+    specs = []
+
+    with open(filename, "r", encoding="utf-8") as infile:
+        lines = infile.readlines()
+
+    line_number = 0
+
+    while line_number < len(lines):
+
+        raw_line = lines[line_number]
+        line = raw_line.strip()
+        line_number += 1
+
+        if not line:
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        spec_start_line = line_number
+        #
+        # Multi-line block
+        #
+        if line.endswith("{"):
+
+            page_type = line[:-1].strip()
+            attrs = {}
+
+            while line_number < len(lines):
+                block_line = lines[line_number].strip()
+                line_number += 1
+                if block_line == "}":
+                    break
+
+                if not block_line:
+                    continue
+
+                if block_line.startswith("#"):
+                    continue
+
+                attrs.update(
+                    parse_attributes(block_line)
+                )
+        #
+        # Single-line entry
+        #
+        else:
+            parts = shlex.split(line)
+            page_type = parts[0]
+            attrs_text = line[len(page_type):]
+            attrs = parse_attributes(attrs_text)
+
+        specs.append(
+            PageSpec(
+                page_type=page_type,
+                attrs=attrs,
+                line_number=spec_start_line
+            )
+        )
+    return specs
+
+
+import pprint
 def main():
+
+    specs = read_page_specs("input.txt")
+    # pprint.pprint(specs)
+
     booklet = Booklet()
-    booklet.add_page(
-        PageWord(booklet, 
-                 title="Word Page"))
-    booklet.add_page(
-        PageWord(booklet, 
-                title="Bravo 2"))
-    
-    booklet.add_page(
-        TextPage(booklet, 
-                 style={
-                    "colorFrame": colors.blue,
-                    "drawFrame": True
-                 }, 
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."))
 
-    booklet.add_page(
-        TextPage(booklet, 
-                 text="2 <i>Lorem ipsum</i> dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."*2))
-
-    booklet.add_page(
-        PageWord(booklet, 
-                 title="Second Word Page"))
-    booklet.add_page(
-        PageWord(booklet, 
-                 title="Bravo Two2"))
-    
-    booklet.add_page(
-        TextPage(booklet, 
-                 style={
-                    "colorFrame": colors.blue,
-                    "drawFrame": True
-                 }, 
-                 text="3 <b>Lorem ipsum dolor</b> sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "*3))
-    
-
-
-
+    build_book(
+        booklet,
+        specs,
+        PageFactory
+    )
     booklet.render()
+
+    # booklet.add_page(
+    #     PageWord(booklet, 
+    #              title="Word Page"))
+    # booklet.add_page(
+    #     PageWord(booklet, 
+    #             title="Bravo 2"))
+    
+    # booklet.add_page(
+    #     TextPage(booklet, 
+    #              style={
+    #                 "colorFrame": colors.blue,
+    #                 "drawFrame": True
+    #              }, 
+    #         text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."))
+
+    # booklet.add_page(
+    #     TextPage(booklet, 
+    #              text="2 <i>Lorem ipsum</i> dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."*2))
+
+    # booklet.add_page(
+    #     PageWord(booklet, 
+    #              title="Second Word Page"))
+    # booklet.add_page(
+    #     PageWord(booklet, 
+    #              title="Bravo Two2"))
+    
+    # booklet.add_page(
+    #     TextPage(booklet, 
+    #              style={
+    #                 "colorFrame": colors.blue,
+    #                 "drawFrame": True
+    #              }, 
+    #              text="3 <b>Lorem ipsum dolor</b> sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "*3))
+    
+
+
 
 if __name__ == '__main__':
     main()
