@@ -26,9 +26,9 @@ class Font:
 @dataclass
 class Style:
     font : Font = field(default_factory=Font)
-    margin: int = 4
-    drawFrame: bool = True
-    colorFrame: colors.Color = colors.blue
+    # margin: int = 4
+    drawFrame: bool = False
+    colorFrame: colors.Color = colors.darkblue
     colorGrid: colors.Color = colors.lightgrey
 
 @dataclass
@@ -60,6 +60,7 @@ class PageFactory:
     
     @classmethod
     def create(cls, page_type, **attrs):
+        # print(f"PageFactory: Creating page of type '{page_type}' with attributes {attrs}")
         page_class = cls._registry.get(page_type)
         if page_class is None:
             print(
@@ -67,9 +68,6 @@ class PageFactory:
             )
             return None
         return page_class(**attrs)
-
-  
-
 
 class Page(ABC):
     DEFAULT_colorFrame = colors.blue
@@ -87,8 +85,10 @@ class Page(ABC):
         pass
 
     def get_style(self, path):
+        # print (f"Getting style for path '{path}'")
         # Page override?
         if path in self.overrides:
+            # print (f"Found override for path '{path}': {self.overrides[path]}")
             return self.overrides[path]
         # Otherwise use book default
         return get_nested_attr(
@@ -98,6 +98,8 @@ class Page(ABC):
 
     def render(self, canvas, rotate, corner):
         #print (f"Rendering page with title {self.title} at corner {corner} with rotate={rotate}")
+        # print("BOOK STYLE ID:", id(self.book.style))
+        # print("PAGE STYLE ID:", id(self.style) if hasattr(self, "style") else None)
         canvas.saveState()
         if rotate: 
             width, height = canvas._pagesize
@@ -155,9 +157,10 @@ class PageWord(Page):
         canvas.setFont("Helvetica", 12)
         canvas.drawCentredString(Page.mid.x, Page.mid.y, self.title)
 
+@PageFactory.register("text")
 class TextPage(Page):
-    def __init__(self, booklet, text="", style=None, title="Generic TextPage", **kwargs):
-        super().__init__(booklet, style, **kwargs)
+    def __init__(self, text="", title="Generic Text Page", **kwargs):
+        super().__init__()
         self.text = text
         self.title = title
 
@@ -220,27 +223,43 @@ class Booklet:
         
         self.canvas.save()
 
-
-
 def set_nested_attr(obj, path, value):
-    """
-    set_nested_attr(style, "font.size", 10)
-    becomes:
-    style.font.size = 10
-    """
+    print("SETTING:", path, "=", value, "on", obj)
+
     parts = path.split(".")
     current = obj
+
     for part in parts[:-1]:
+        print("  traversing:", part, "->", getattr(current, part))
         current = getattr(current, part)
+
+    #print("  setting final:", parts[-1])
     setattr(current, parts[-1], value)
 
 def build_book(book, specs, page_factory):
     for spec in specs:
-        #
+        if spec.page_type == "book":
+            for key, value in spec.attrs.items():
+                try:
+                    # print(f"Setting book config '{key}' to '{value}'")
+                    set_nested_attr(
+                        book.config,
+                        key,
+                        value
+                    )
+                except AttributeError:
+                    print(
+                        f"WARNING line "
+                        f"{spec.line_number}: "
+                        f"unknown book setting "
+                        f"'{key}'"
+                    )
+            continue
+
         # Handle defaults
-        #
         if spec.page_type == "defaults":
             for key, value in spec.attrs.items():
+                # print(f"Setting book style '{key}' to '{value}'")
                 try:
                     set_nested_attr(
                         book.style,
@@ -259,10 +278,12 @@ def build_book(book, specs, page_factory):
         #
         # Create page
         #
+        print (f"Creating page of type '{spec.page_type}' with attributes {spec.attrs}")
         page = page_factory.create(
             spec.page_type,
             **spec.attrs
         )
+        page.overrides = spec.attrs
 
         if page is None:
             print(
@@ -273,7 +294,9 @@ def build_book(book, specs, page_factory):
             )
             continue
         book.add_page(page)
-
+        pprint.pprint(page.__dict__)
+    # print("\n----- Final Book State -----")
+    # pprint.pprint(book.__dict__)
 
 #########
 # Utility Functions
@@ -283,7 +306,7 @@ import shlex
 def get_nested_attr(obj, path):
     current = obj
     for part in path.split("."):
-        #print (f"Accessing attribute '{part}' of object {current}")
+        # print (f"Accessing attribute '{part}' of object {current}")
         current = getattr(current, part)
     return current
 
@@ -403,11 +426,12 @@ def read_page_specs(filename):
 
 import pprint
 def main():
-
-    specs = read_page_specs("input.txt")
-    # pprint.pprint(specs)
-
     booklet = Booklet()
+    pprint.pprint(booklet.config)
+    specs = read_page_specs("input.txt")
+    print("----- After parsing -----")
+    pprint.pprint(booklet.config)
+    pprint.pprint(specs)
 
     build_book(
         booklet,
@@ -415,43 +439,6 @@ def main():
         PageFactory
     )
     booklet.render()
-
-    # booklet.add_page(
-    #     PageWord(booklet, 
-    #              title="Word Page"))
-    # booklet.add_page(
-    #     PageWord(booklet, 
-    #             title="Bravo 2"))
-    
-    # booklet.add_page(
-    #     TextPage(booklet, 
-    #              style={
-    #                 "colorFrame": colors.blue,
-    #                 "drawFrame": True
-    #              }, 
-    #         text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."))
-
-    # booklet.add_page(
-    #     TextPage(booklet, 
-    #              text="2 <i>Lorem ipsum</i> dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."*2))
-
-    # booklet.add_page(
-    #     PageWord(booklet, 
-    #              title="Second Word Page"))
-    # booklet.add_page(
-    #     PageWord(booklet, 
-    #              title="Bravo Two2"))
-    
-    # booklet.add_page(
-    #     TextPage(booklet, 
-    #              style={
-    #                 "colorFrame": colors.blue,
-    #                 "drawFrame": True
-    #              }, 
-    #              text="3 <b>Lorem ipsum dolor</b> sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "*3))
-    
-
-
 
 if __name__ == '__main__':
     main()
