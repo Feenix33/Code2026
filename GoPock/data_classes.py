@@ -9,14 +9,17 @@ class Point:
 @dataclass
 class Font:
     name: str = "Helvetica"
-    size: int = 12
+    size: int = 10
     color: str = "black"
 
 @dataclass
 class Style:
     font: Font = field(default_factory=Font)
+    fontTitle: Font = field(default_factory=lambda: Font(size=12, color="blue"))
+    titleFormat: str = "\t%s"
+    date: str = None
     drawFrame: bool = False
-    colorFrame: colors.Color = colors.darkblue
+    colorFrame: colors.Color = colors.red
     colorGrid: colors.Color = colors.lightgrey
 
 @dataclass

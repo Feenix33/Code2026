@@ -4,8 +4,14 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Frame, Paragraph
 from reportlab.lib import colors
 
-from data_classes import Point
-from utils import get_nested_attr
+from data_classes import Point, Font
+from utils import buildThreePart, get_nested_attr
+
+
+# class Font:
+#     name: str = "Helvetica"
+#     size: int = 10
+#     color: str = "black"
 
 class PageFactory:
     _registry = {}
@@ -26,8 +32,8 @@ class PageFactory:
         return page_class(**attrs)
 
 class Page(ABC):
-    DEFAULT_colorFrame = colors.blue
-    DEFAULT_colorGrid = colors.lightgrey
+    # DEFAULT_colorFrame = colors.blue
+    # DEFAULT_colorGrid = colors.lightgrey
     mid = Point(0, 0)
     max = Point(0, 0)
 
@@ -42,7 +48,33 @@ class Page(ABC):
     def get_style(self, path):
         if path in self.overrides:
             return self.overrides[path]
-        return get_nested_attr(self.book.style, path)
+        
+        # Get the base attribute from the book's style
+        base_attr = get_nested_attr(self.book.style, path)
+        
+        # Check if there are nested overrides for this path (e.g., "fontTitle.size")
+        prefix = path + "."
+        nested_overrides = {}
+        for key, value in self.overrides.items():
+            if key.startswith(prefix):
+                nested_key = key[len(prefix):]
+                nested_overrides[nested_key] = value
+        
+        # If we found nested overrides, apply them to a copy of the attribute
+        if nested_overrides:
+            from dataclasses import is_dataclass, replace
+            import copy
+            
+            if is_dataclass(base_attr):
+                # For dataclass objects (like Font), use dataclasses.replace()
+                base_attr = replace(base_attr, **nested_overrides)
+            else:
+                # For other objects, create a shallow copy and setattr
+                base_attr = copy.copy(base_attr)
+                for key, value in nested_overrides.items():
+                    setattr(base_attr, key, value)
+        
+        return base_attr
 
     def render(self, canvas, rotate, corner):
         canvas.saveState()
@@ -57,6 +89,7 @@ class Page(ABC):
             canvas.setStrokeColor(self.get_style("colorFrame"))
             canvas.rect(0, 0, Page.max.x, Page.max.y)
 
+        # print(f"Page max: {Page.max.x}, {Page.max.y} and mid: {Page.mid.x}, {Page.mid.y}")
         self.draw(canvas)
         canvas.restoreState()
 
@@ -104,3 +137,18 @@ class Page(ABC):
             'justify': reportlab.lib.enums.TA_JUSTIFY,
         }
         return mapping.get(align, reportlab.lib.enums.TA_LEFT)
+
+    def useCanvasFont(self, canvas, font: Font):
+        canvas.setFont(font.name, font.size)
+        canvas.setFillColor(font.color)
+
+    def printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None):
+        strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)
+        if strLeft != '':
+            canvas.drawString(10, y - (canvas._fontsize*1.5), strLeft)
+        if strCenter != '':
+            canvas.drawCentredString(Page.mid.x, y - (canvas._fontsize*1.5), strCenter)
+        if strRight != '':
+            canvas.drawRightString(Page.max.x - 10, y - (canvas._fontsize*1.5), strRight)
+        # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
+        return y - canvas._fontsize * 4
