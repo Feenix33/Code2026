@@ -48,9 +48,18 @@ class Page(ABC):
     def get_style(self, path):
         if path in self.overrides:
             return self.overrides[path]
-        
-        # Get the base attribute from the book's style
-        base_attr = get_nested_attr(self.book.style, path)
+
+        # First try page-specific defaults / page instance attributes
+        try:
+            return get_nested_attr(self, path)
+        except AttributeError:
+            pass
+
+        # Then fall back to the book-wide shared style
+        try:
+            base_attr = get_nested_attr(self.book.style, path)
+        except AttributeError:
+            return None
         
         # Check if there are nested overrides for this path (e.g., "fontTitle.size")
         prefix = path + "."
@@ -152,3 +161,11 @@ class Page(ABC):
             canvas.drawRightString(Page.max.x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
         return y - canvas._fontsize * 4
+    
+@PageFactory.register("blank")
+class PageBlank(Page):
+    def __init__(self, **kwargs):
+        super().__init__()
+
+    def draw(self, canvas):
+        pass

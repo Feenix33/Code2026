@@ -8,6 +8,7 @@ from booklet import Booklet
 from page import PageFactory
 import page_word
 import page_text
+import page_lines
 from utils import read_page_specs, build_book
 
 
