@@ -1,13 +1,13 @@
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen.canvas import Canvas
 
-from data_classes import Style, BookletStyle, Point
+from data_classes import PageStyle, BookletStyle, Point
 from page import Page
 
 class Booklet:
     def __init__(self):
         self.docSize = landscape(letter)
-        self.style = Style()
+        self.style = PageStyle()
         self.config = BookletStyle()
         self.pages = []
 

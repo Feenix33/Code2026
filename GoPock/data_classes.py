@@ -13,14 +13,15 @@ class Font:
     color: str = "black"
 
 @dataclass
-class Style:
+class PageStyle:
     font: Font = field(default_factory=Font)
     fontTitle: Font = field(default_factory=lambda: Font(size=12, color="blue"))
     titleFormat: str = "\t%s"
     date: str = None
     drawFrame: bool = False
     colorFrame: colors.Color = colors.red
-    colorGrid: colors.Color = colors.lightgrey
+    # colorGrid: colors.Color = colors.lightgrey
+    colorLine: colors.Color = colors.lightgrey
 
 @dataclass
 class BookletStyle:

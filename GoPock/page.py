@@ -36,10 +36,15 @@ class Page(ABC):
     # DEFAULT_colorGrid = colors.lightgrey
     mid = Point(0, 0)
     max = Point(0, 0)
+    PageSequence = 1
 
     def __init__(self):
         self.book = None
         self.overrides = {}
+        # Debug ID for each page
+        self.debugID = "[" + self.__class__.__name__ + "_" + str(Page.PageSequence) + "]"
+        Page.PageSequence += 1
+
 
     @abstractmethod
     def draw(self, canvas):
