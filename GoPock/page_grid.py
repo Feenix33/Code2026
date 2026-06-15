@@ -14,7 +14,7 @@ class PageGrid(Page):
         gridX = self.get_style('gridX')
         gridY = self.get_style('gridY')
         
-        print (f"DEBUG: {self.debugID} gridX: {gridX}, gridY: {gridY}")
+        # print (f"DEBUG: {self.debugID} gridX: {gridX}, gridY: {gridY}")
         # Both None: use default spacing
         if gridX is None and gridY is None:
             spacing = self.get_style('spacing') * inch
@@ -35,7 +35,7 @@ class PageGrid(Page):
         spacingY = self.max.y / gridY
         return spacingX, spacingY
 
-    def _draw_grid_lines(self, canvas, spacingX, spacingY, max=Page.max):
+    def _draw_grid_lines(self, canvas, spacingX, spacingY, max):
         """Draw vertical and horizontal grid lines."""
         # canvas.setStrokeColor(self.colorGrid)
         
@@ -49,20 +49,8 @@ class PageGrid(Page):
     def draw(self, canvas):
         spacing = self.get_style("spacing") * inch
         spacingX, spacingY = self._calculate_spacing()
-        print(f"{self.debugID} spacingX: {spacingX}, spacingY: {spacingY}")
-        #self._draw_grid_lines(canvas, spacingX, spacingY)
         colorLine = self.get_style("colorLine")
 
         # draw the lines
         canvas.setStrokeColor(colorLine)
-        self._draw_grid_lines(canvas, spacingX, spacingY)
-
-        # y = Page.max.y - spacing # start at top
-        # while y > 0:
-        #     canvas.line(0, y, Page.max.x, y)
-        #     y -= spacing
-        
-        # x = 0
-        # while x < Page.max.x:
-        #     canvas.line(x, 0, x, Page.max.y)
-        #     x += spacing
+        self._draw_grid_lines(canvas, spacingX, spacingY, self.max)

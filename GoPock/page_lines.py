@@ -16,7 +16,7 @@ class PageLines(Page):
 
         # draw the lines
         canvas.setStrokeColor(colorLine)
-        y = Page.max.y - spacing # start at top
+        y = self.max.y - spacing # start at top
         while y > 0:
-            canvas.line(0, y, Page.max.x, y)
+            canvas.line(0, y, self.max.x, y)
             y -= spacing

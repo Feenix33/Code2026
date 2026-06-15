@@ -16,4 +16,4 @@ class PageWord(Page):
         titleFormat = self.get_style("titleFormat")
         pageDate = self.get_style("date")
         # print(f"Title: {self.title}, Format: {titleFormat}, Date: {pageDate}")
-        self.printCanvasThreePart(canvas, Page.mid.y, formatStr=titleFormat, titleStr=self.title, date=pageDate)
+        self.printCanvasThreePart(canvas, self.mid.y, formatStr=titleFormat, titleStr=self.title, date=pageDate)

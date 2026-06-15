@@ -32,16 +32,17 @@ class Booklet:
     def render(self):
         corners = self.computePaneCorners()
         margin = self.config.margin
-        Page.max.x = (self.docSize[0] - 8 * margin) / 4
-        Page.max.y = (self.docSize[1] - 4 * margin) / 2
-        Page.mid.x = Page.max.x / 2
-        Page.mid.y = Page.max.y / 2
+        sizewh = Point( (self.docSize[0] - 8 * margin) / 4, (self.docSize[1] - 4 * margin) / 2 )
+        # Page.max.x = (self.docSize[0] - 8 * margin) / 4
+        # Page.max.y = (self.docSize[1] - 4 * margin) / 2
+        # Page.mid.x = Page.max.x / 2
+        # Page.mid.y = Page.max.y / 2
         self.canvas = Canvas(self.config.nameOut, pagesize=self.docSize)
 
         n = 0
         for page in self.pages:
             if page is not None:
-                page.render(self.canvas, rotate=(n not in [0, 1, 2, 3]), corner=corners[n % 4])
+                page.render(self.canvas, rotate=(n not in [0, 1, 2, 3]), corner=corners[n % 4], sizewh=sizewh)
             n += 1
 
         self.canvas.save()

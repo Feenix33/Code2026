@@ -34,8 +34,8 @@ class PageFactory:
 class Page(ABC):
     # DEFAULT_colorFrame = colors.blue
     # DEFAULT_colorGrid = colors.lightgrey
-    mid = Point(0, 0)
-    max = Point(0, 0)
+    # mid = Point(0, 0)
+    # max = Point(0, 0)
     PageSequence = 1
 
     def __init__(self):
@@ -44,6 +44,8 @@ class Page(ABC):
         # Debug ID for each page
         self.debugID = "[" + self.__class__.__name__ + "_" + str(Page.PageSequence) + "]"
         Page.PageSequence += 1
+        self.mid = Point(0, 0)
+        self.max = Point(0, 0)
 
 
     @abstractmethod
@@ -90,7 +92,9 @@ class Page(ABC):
         
         return base_attr
 
-    def render(self, canvas, rotate, corner):
+    def render(self, canvas, rotate, corner, sizewh):
+        self.mid = Point(sizewh.x / 2, sizewh.y / 2)
+        self.max = Point(sizewh.x, sizewh.y)
         canvas.saveState()
         if rotate:
             width, height = canvas._pagesize
@@ -101,9 +105,8 @@ class Page(ABC):
 
         if self.get_style("drawFrame") and self.get_style("colorFrame") is not None:
             canvas.setStrokeColor(self.get_style("colorFrame"))
-            canvas.rect(0, 0, Page.max.x, Page.max.y)
+            canvas.rect(0, 0, self.max.x, self.max.y)
 
-        # print(f"Page max: {Page.max.x}, {Page.max.y} and mid: {Page.mid.x}, {Page.mid.y}")
         self.draw(canvas)
         canvas.restoreState()
 
@@ -161,9 +164,9 @@ class Page(ABC):
         if strLeft != '':
             canvas.drawString(10, y - (canvas._fontsize*1.5), strLeft)
         if strCenter != '':
-            canvas.drawCentredString(Page.mid.x, y - (canvas._fontsize*1.5), strCenter)
+            canvas.drawCentredString(self.mid.x, y - (canvas._fontsize*1.5), strCenter)
         if strRight != '':
-            canvas.drawRightString(Page.max.x - 10, y - (canvas._fontsize*1.5), strRight)
+            canvas.drawRightString(self.max.x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
         return y - canvas._fontsize * 4
     

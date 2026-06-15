@@ -10,7 +10,7 @@ class TextPage(Page):
 
     def draw(self, canvas):
         mgn = 10
-        frame = Frame(mgn, mgn, Page.max.x - mgn, Page.max.y - mgn, showBoundary=1)
+        frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
         currentStyle = self.buildParagraphStyle()
         obj = Paragraph(self.text, currentStyle)
         frame.add(obj, canvas)
