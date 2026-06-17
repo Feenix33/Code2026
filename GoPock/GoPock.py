@@ -10,7 +10,18 @@ import page_word
 import page_text
 import page_lines
 import page_grid
+import page_checklist
 from utils import read_page_specs, build_book
+
+"""
+Main TODO:
+
+- Weekly
+
+- Text processor
+
+Refactor TODO:
+"""
 
 
 def main():

@@ -13,6 +13,9 @@ from utils import buildThreePart, get_nested_attr
 #     size: int = 10
 #     color: str = "black"
 
+        # self.spacew = reportlab.pdfbase.pdfmetrics.stringWidth(' ', self.fontName, self.fontsize)/2 #half a space width
+
+
 class PageFactory:
     _registry = {}
 
@@ -56,31 +59,32 @@ class Page(ABC):
         if path in self.overrides:
             return self.overrides[path]
 
-        # First try page-specific defaults / page instance attributes
-        try:
-            return get_nested_attr(self, path)
-        except AttributeError:
-            pass
-
-        # Then fall back to the book-wide shared style
-        try:
-            base_attr = get_nested_attr(self.book.style, path)
-        except AttributeError:
-            return None
-        
-        # Check if there are nested overrides for this path (e.g., "fontTitle.size")
+        # Gather nested overrides for this path (e.g., "fontTitle.size" or "checkbox.color")
         prefix = path + "."
         nested_overrides = {}
         for key, value in self.overrides.items():
             if key.startswith(prefix):
                 nested_key = key[len(prefix):]
                 nested_overrides[nested_key] = value
-        
+
+        # First try page-specific defaults / page instance attributes
+        try:
+            base_attr = get_nested_attr(self, path)
+        except AttributeError:
+            base_attr = None
+
+        # Then fall back to the book-wide shared style if needed
+        if base_attr is None:
+            try:
+                base_attr = get_nested_attr(self.book.style, path)
+            except AttributeError:
+                return None
+
         # If we found nested overrides, apply them to a copy of the attribute
         if nested_overrides:
             from dataclasses import is_dataclass, replace
             import copy
-            
+
             if is_dataclass(base_attr):
                 # For dataclass objects (like Font), use dataclasses.replace()
                 base_attr = replace(base_attr, **nested_overrides)
@@ -89,7 +93,7 @@ class Page(ABC):
                 base_attr = copy.copy(base_attr)
                 for key, value in nested_overrides.items():
                     setattr(base_attr, key, value)
-        
+
         return base_attr
 
     def render(self, canvas, rotate, corner, sizewh):
@@ -168,7 +172,34 @@ class Page(ABC):
         if strRight != '':
             canvas.drawRightString(self.max.x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
-        return y - canvas._fontsize * 4
+        return canvas._fontsize * 1.2
+    
+    def setLineSpec(self, canvas, linespec=None):
+        if linespec is None:
+            linespec = self.get_style("line")
+        if linespec.width is not None and linespec.width > 0:
+            canvas.setLineWidth(linespec.width)
+        # if linespec.dashOn is not None and linespec.dashOn > 0 and linespec.dashOff is not None and linespec.dashOff > 0:
+        #     canvas.setDash([linespec.dashOn, linespec.dashOff],0)
+        if linespec.dash is not None and linespec.dash > 0:
+            dashOn = int(linespec.dash / 10)
+            dashOff = linespec.dash % 10
+            canvas.setDash([dashOn, dashOff], 0)
+        else:
+            canvas.setDash([], 0)
+        canvas.setStrokeColor(linespec.color)
+    
+    def standardTitle(self, canvas, y):
+        title = self.get_style("title")
+        fmtStr = self.get_style("titleFormat")
+        todayDate = self.get_style("date")
+        fontTitle  = self.get_style("fontTitle")
+        canvas.saveState() # we are going to change the font
+        if fontTitle is not None:
+            self.useCanvasFont(canvas, fontTitle)
+        y = self.printCanvasThreePart(canvas, y, fmtStr, title, todayDate)
+        canvas.restoreState()
+        return y
     
 @PageFactory.register("blank")
 class PageBlank(Page):

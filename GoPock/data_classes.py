@@ -13,15 +13,27 @@ class Font:
     color: str = "black"
 
 @dataclass
+class LineSpec:
+    color: colors.Color = colors.lightgrey
+    width: float = 1.0
+    dash: int = 0  # 10s = on 1s = off
+
+@dataclass
+class CheckboxSpec:
+    color: colors.Color = colors.black
+    symbol: str = "X"
+
+@dataclass
 class PageStyle:
     font: Font = field(default_factory=Font)
-    fontTitle: Font = field(default_factory=lambda: Font(size=12, color="blue"))
+    fontTitle: Font = field(default_factory=lambda: Font(size=13, color=colors.black))
     titleFormat: str = "\t%s"
     date: str = None
     drawFrame: bool = False
     colorFrame: colors.Color = colors.red
     # colorGrid: colors.Color = colors.lightgrey
     colorLine: colors.Color = colors.lightgrey
+    line: LineSpec = field(default_factory=LineSpec)
 
 @dataclass
 class BookletStyle:
