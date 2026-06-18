@@ -127,6 +127,25 @@ def build_book(book, specs, page_factory):
                     print(f"WARNING line {spec.line_number}: unknown style attribute '{key}'")
             continue
 
+        # Special handling for "weekly" type - creates both left and right pages
+        if spec.page_type == "weekly":
+            # Create left page
+            left_page = page_factory.create("weeklyleft", **spec.attrs)
+            if left_page is None:
+                print(f"WARNING line {spec.line_number}: failed to create WeeklyLeft page")
+            else:
+                left_page.overrides = spec.attrs
+                book.add_page(left_page)
+            
+            # Create right page
+            right_page = page_factory.create("weeklyright", **spec.attrs)
+            if right_page is None:
+                print(f"WARNING line {spec.line_number}: failed to create WeeklyRight page")
+            else:
+                right_page.overrides = spec.attrs
+                book.add_page(right_page)
+            continue
+
         # print(f"Creating page of type '{spec.page_type}' with attributes {spec.attrs}")
         page = page_factory.create(spec.page_type, **spec.attrs)
         if page is None:
