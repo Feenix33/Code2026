@@ -6,6 +6,7 @@ from reportlab.lib import colors
 
 from data_classes import Point, Font
 from utils import buildThreePart, get_nested_attr
+import sys
 
 
 # class Font:

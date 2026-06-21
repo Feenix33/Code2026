@@ -12,29 +12,33 @@ import page_lines
 import page_grid
 import page_checklist
 import page_weekly
+import page_title
 from utils import read_page_specs, build_book
 
 """
 Main TODO:
-
-- Weekly
-
 - Text processor
+- Text add page as needed
+- Tracker
+- Dice page
 
 Refactor TODO:
 
 
 Hints:
-Print current fuction name
-import inspect
-inspect.currentframe().f_code.co_name
-
+================================================================================================
+Reportlab units are in points (1/72 inch)
+from reportlab.lib.units import inch
+x_coordinate = 1.5 * inch 
 ================================================================================================
 Print current function name
 import sys
 def my_awesome_function():
     func_name = sys._getframe().f_code.co_name
     print(f"Currently executing: {func_name}")
+
+    import sys
+    print(f"DEBUG {sys._getframe().f_code.co_name}({self.debugID}) ")
 
 ================================================================================================
 strftime
