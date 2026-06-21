@@ -28,6 +28,42 @@ Hints:
 Print current fuction name
 import inspect
 inspect.currentframe().f_code.co_name
+
+================================================================================================
+Print current function name
+import sys
+def my_awesome_function():
+    func_name = sys._getframe().f_code.co_name
+    print(f"Currently executing: {func_name}")
+
+================================================================================================
+strftime
+Years & Months: 
+%Y (4-digit)
+%y (2-digit)
+%B (full name)
+%b (abbr.)
+%m (zero-padded)
+
+Days & Weeks
+%d (day)
+%A/%a (weekday name)
+%j (day of year)
+%w = Weekday symbol (custom)
+
+Time & Zone:
+%H/%I (24/12h),
+%M (min)
+%S (sec)
+%p (AM/PM)
+%z (UTC offset)
+%Z (timezone)
+
+Locales:
+%c (date/time)
+%x (date)
+%X (time)
+
 """
 
 

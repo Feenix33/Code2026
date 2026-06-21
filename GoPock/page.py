@@ -163,14 +163,21 @@ class Page(ABC):
         canvas.setFont(font.name, font.size)
         canvas.setFillColor(font.color)
 
-    def printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None):
+    def printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None, xmin=0, xmax=None):
         strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)
+        min_x = xmin+10
+        if xmax is None:
+            max_x = self.max.x
+            mid_x = self.mid.x
+        else:
+            max_x = xmax
+            mid_x = xmin + ((max_x - xmin) / 2)
         if strLeft != '':
-            canvas.drawString(10, y - (canvas._fontsize*1.5), strLeft)
+            canvas.drawString(min_x, y - (canvas._fontsize*1.5), strLeft)
         if strCenter != '':
-            canvas.drawCentredString(self.mid.x, y - (canvas._fontsize*1.5), strCenter)
+            canvas.drawCentredString(mid_x, y - (canvas._fontsize*1.5), strCenter)
         if strRight != '':
-            canvas.drawRightString(self.max.x - 10, y - (canvas._fontsize*1.5), strRight)
+            canvas.drawRightString(max_x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
         return canvas._fontsize * 1.2
     
