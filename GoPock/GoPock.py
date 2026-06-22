@@ -18,12 +18,12 @@ from utils import read_page_specs, build_book
 """
 Main TODO:
 - Text processor
-- Text add page as needed
+    - Style commands
+    - Text add page as needed
+    - Other processors
+
 - Tracker
 - Dice page
-
-Refactor TODO:
-
 
 Hints:
 ================================================================================================
