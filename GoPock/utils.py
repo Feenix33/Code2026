@@ -12,7 +12,7 @@ def set_nested_attr(obj, path, value):
     current = obj
 
     for part in parts[:-1]:
-        print("  traversing:", part, "->", getattr(current, part))
+        # print("  traversing:", part, "->", getattr(current, part))
         current = getattr(current, part)
 
     setattr(current, parts[-1], value)
@@ -113,6 +113,9 @@ def build_book(book, specs, page_factory):
     for spec in specs:
         if spec.page_type == "book":
             for key, value in spec.attrs.items():
+                if key == "addPages":
+                    setattr(book, key, value)
+                    continue
                 try:
                     set_nested_attr(book.config, key, value)
                 except AttributeError:

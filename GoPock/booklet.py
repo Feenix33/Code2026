@@ -9,6 +9,8 @@ class Booklet:
         self.docSize = landscape(letter)
         self.style = PageStyle()
         self.config = BookletStyle()
+        # Controls whether pages may be added automatically when content overflows
+        self.addPages = False
         self.pages = []
 
     def add_page(self, page=None):
@@ -30,19 +32,34 @@ class Booklet:
         return corners
 
     def render(self):
-        corners = self.computePaneCorners()
-        margin = self.config.margin
-        sizewh = Point( (self.docSize[0] - 8 * margin) / 4, (self.docSize[1] - 4 * margin) / 2 )
+        self.corners = self.computePaneCorners()
+        self.margin = self.config.margin
+        self.sizewh = Point( (self.docSize[0] - 8 * self.margin) / 4, (self.docSize[1] - 4 * self.margin) / 2 )
         # Page.max.x = (self.docSize[0] - 8 * margin) / 4
         # Page.max.y = (self.docSize[1] - 4 * margin) / 2
         # Page.mid.x = Page.max.x / 2
         # Page.mid.y = Page.max.y / 2
         self.canvas = Canvas(self.config.nameOut, pagesize=self.docSize)
 
-        n = 0
+        self.n = 0
         for page in self.pages:
             if page is not None:
-                page.render(self.canvas, rotate=(n not in [0, 1, 2, 3]), corner=corners[n % 4], sizewh=sizewh)
-            n += 1
+                page.render(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)
+            self.n += 1
+            if self.n >= 8:
+                self.canvas.showPage()
+                self.n= 0
+                # import sys
+                # print(f"DEBUG {sys._getframe().f_code.co_name}() n={n}")
 
         self.canvas.save()
+    
+    def insertOverflow(self, page):
+        import sys
+        # print(f"DEBUG {sys._getframe().f_code.co_name}(page.debugID) Attempting page insertion n={self.n}")
+        page.renderEnd(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)
+        self.n += 1
+        if self.n >= 8:
+            self.canvas.showPage()  
+            self.n= 0
+        page.renderStart(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)

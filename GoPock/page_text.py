@@ -3,6 +3,7 @@ from reportlab.platypus import Frame, Paragraph
 import os
 import processors
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +60,12 @@ class TextPage(Page):
             'textColor': base_font.color,
         }
 
-        self._body_style = self.buildParagraphStyle(**base_kwargs)
+        self._body_style = self.buildParagraphStyle(**base_kwargs, name='BBody')
         self._heading_style = self.buildParagraphStyle(
-            **{**base_kwargs, 'fontSize': base_font.size * 1.2}
+            **{**base_kwargs, 'fontSize': base_font.size * 1.2,},name='HHeading'
         )
         self._title_style = self.buildParagraphStyle(
-            **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center'}
+            **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center', 'textColor': 'blue'}, name='TTitle'
         )
 
     def _get_paragraph_style(self, style_name, overrides=None):
@@ -149,14 +150,64 @@ class TextPage(Page):
         frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
         text_to_render = self._read_and_process()
 
+        # Helper to attempt adding a new page when requested or on error
+        def _attempt_add_page():
+            if hasattr(self, 'book') and self.book is not None and getattr(self.book, 'addPages', False):
+                try:
+                    # original lines
+                    # new_page = self.__class__(**(self.overrides or {}))
+                    # self.book.add_page(new_page)
+                    # cme attempt to fix the issue
+                    # print("Attempting overflow insertion")
+                    self.book.insertOverflow(self)
+                    print(f"INFO: Added new page of type {self.__class__.__name__} due to content overflow or .np command")
+                except Exception as e:
+                    print(f"WARNING: failed to add new page automatically: {e}")
+            else:
+                # print("WARNING: content overflow or .np encountered; stopping page rendering")
+                print("WARNING: content overflow on page {self.debugID} incomplete rendering")
+
         if isinstance(text_to_render, list):
             for item in text_to_render:
+                print (">> ", item)
+                if item.get('type') == 'newpage':
+                    # handle explicit new page command
+                    _attempt_add_page()
+                    break
+
                 if item.get('type') != 'paragraph':
                     continue
+
                 style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
                 obj = Paragraph(item.get('text', ''), style)
-                frame.add(obj, canvas)
+                try:
+                    res = frame.add(obj, canvas)
+                except Exception as e:
+                    print(f"WARNING: exception while adding paragraph: {e}")
+                    _attempt_add_page()
+                    break
+
+                # If frame.add returns 0, treat as overflow/error
+                if res == 0:
+                    # print("WARNING: frame.add returned 0 (no space) — stopping page rendering")
+                    # print(f"DEBUG: {sys._getframe().f_code.co_name}({self.debugID})")
+                    _attempt_add_page()
+                    # now add the frame
+                    frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
+                    res = frame.add(obj, canvas)
+                    if res == 0:
+                        print ("ERROR: Paragraph is too long for page")
+                        sys.exit(1)
+                    # break  # cme to correct frame addition issue
         else:
             currentStyle = self._get_paragraph_style('body')
             obj = Paragraph(text_to_render, currentStyle)
-            x = frame.add(obj, canvas)
+            try:
+                res = frame.add(obj, canvas)
+            except Exception as e:
+                print(f"WARNING: exception while adding paragraph: {e}")
+                _attempt_add_page()
+                return
+            if res == 0:
+                print("WARNING: frame.add returned 0 (no space) — stopping page rendering")
+                _attempt_add_page()

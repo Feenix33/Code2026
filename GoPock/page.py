@@ -97,7 +97,7 @@ class Page(ABC):
 
         return base_attr
 
-    def render(self, canvas, rotate, corner, sizewh):
+    def renderStart(self, canvas, rotate, corner, sizewh):
         self.mid = Point(sizewh.x / 2, sizewh.y / 2)
         self.max = Point(sizewh.x, sizewh.y)
         canvas.saveState()
@@ -112,9 +112,15 @@ class Page(ABC):
             canvas.setStrokeColor(self.get_style("colorFrame"))
             canvas.rect(0, 0, self.max.x, self.max.y)
 
-        self.draw(canvas)
+    def renderEnd(self, canvas, rotate, corner, sizewh):
         canvas.restoreState()
 
+    def render(self, canvas, rotate, corner, sizewh):
+        self.renderStart(canvas, rotate, corner, sizewh)
+        self.draw(canvas)
+        self.renderEnd(canvas, rotate, corner, sizewh)
+        
+        
     def buildParagraphStyle(
         self,
         name='CurrentStyle',
@@ -131,6 +137,7 @@ class Page(ABC):
         spaceAfter=None,
         leading=None,
     ):
+        # print(f"DEBUG: Paragraph style {name} created with fontsize={fontSize}, textColor={textColor}")
         if leading is None:
             leading = int(fontSize * 1.2)
         if spaceAfter is None:

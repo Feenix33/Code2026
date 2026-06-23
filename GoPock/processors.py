@@ -80,6 +80,11 @@ class NroffProcessor(Processor):
                     # unknown command: ignore
                     continue
                 continue
+            if line.startswith('.np'):
+                # explicit new page command
+                items.append({'type': 'newpage'})
+                # stop current page processing here (signal to renderer)
+                continue
 
             # build style args by combining persistent style defs and current overrides
             combined_args = dict(style_defs.get(current_style, {}))
