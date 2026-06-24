@@ -98,6 +98,7 @@ class NroffProcessor(Processor):
                     if name == 'reset':
                         target = params_text.split(None, 1)[0].lower() if params_text else None
                         if target:
+                            print(f"DEBUG: Reset 1 target={target}")
                             if target in style_defs:
                                 style_defs[target] = {}
                             else:
@@ -105,12 +106,16 @@ class NroffProcessor(Processor):
                         else:
                             for k in style_defs:
                                 style_defs[k] = {}
+
                         continue
 
                     # allow '.style <name> reset' syntax as well
                     if params_text.strip().lower() == 'reset':
                         if name in style_defs:
                             style_defs[name] = {}
+                            print(f"DEBUG: Reset 2 name={name}")
+                            items.append({'type': 'reset', 'style':name})
+                            current_style_args = {}
                         else:
                             print(f"WARNING: unknown style name '{name}' in .style command")
                         continue

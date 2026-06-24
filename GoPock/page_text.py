@@ -10,7 +10,12 @@ logger = logging.getLogger(__name__)
 """
 TODO
 - Fix the reset command: procesor should return a reset type and text is the style to reset
-- the font command should only work for one line and then get reset. the style_args should be cleared after use?
+
+operation: the processor is passing a pargraph style object, not using the ones from text page
+need to get rid of the debug in the old program and adjust the spaceAfter if the font size changes
+rest should be good
+
+- if change fontsize need to change spacing too
 - Potentiall add more heading styles for the markdown processor
 - Add the other troff commands
 
@@ -75,6 +80,33 @@ class TextPage(Page):
         self._title_style = self.buildParagraphStyle(
             **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center', 'textColor': 'blue'}, name='TTitle'
         )
+
+    def _reset_style(self, style_name):
+        # TODO: refactor the _build_setion_styles
+        import sys
+        print(f"DEBUG: {sys._getframe().f_code.co_name}({self.debugID})Resetting style: {style_name}")
+
+        base_font = self.get_style("font")
+        if base_font is None:
+            from data_classes import Font
+            base_font = Font()
+
+        base_kwargs = {
+            'fontName': base_font.name,
+            'fontSize': base_font.size,
+            'textColor': base_font.color,
+        }
+
+        if style_name == 'all' or style_name == 'body':
+            self._body_style = self.buildParagraphStyle(**base_kwargs, name='BBody')
+        if style_name == 'all' or style_name == 'heading':
+            self._heading_style = self.buildParagraphStyle(
+                **{**base_kwargs, 'fontSize': base_font.size * 1.2,},name='HHeading'
+            )
+        if style_name == 'all' or style_name == 'title':
+            self._title_style = self.buildParagraphStyle(
+                **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center', 'textColor': 'blue'}, name='TTitle'
+            )
 
     def _get_paragraph_style(self, style_name, overrides=None):
         if self._body_style is None:
@@ -186,8 +218,15 @@ class TextPage(Page):
 
         if isinstance(text_to_render, list):
             for item in text_to_render:
-                print (">> ", item)
-                if item.get('type') == 'newpage':
+
+                ############
+                if item.get("type") == "Xparagraph":
+                    print ('p', end='')
+                else:
+                    print (">> ", item)
+                ############
+
+                if item.get("type") == "newpage":
                     # handle explicit new page or break page command
                     if hasattr(self, 'book') and self.book is not None and getattr(self.book, 'addPages', False):
                         self.addObject(PageBreak())
@@ -197,10 +236,20 @@ class TextPage(Page):
                         print("WARNING: page break encountered but addPages is disabled; stopping page rendering")
                         break
 
+                if item.get('type') == 'reset':
+                    # handle reset command
+                    if item.get('style') == 'all':
+                        print("DEBUG: 238 Resetting all styles to defaults")
+                        self._reset_style('all')
+                    else:
+                        print(f"DEBUG: 241 Resetting style '{item.get('style')}' to defaults")
+                    continue
+
                 if item.get('type') != 'paragraph':
                     continue
 
                 style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
+                print(f"DEBUG: 248 {vars(style)}")
                 obj = Paragraph(item.get('text', ''), style)
                 try:
                     res = frame.add(obj, canvas)
