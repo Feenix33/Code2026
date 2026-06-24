@@ -2,7 +2,26 @@ from abc import ABC, abstractmethod
 from xml.sax.saxutils import escape
 import re
 from utils import parse_attributes
+"""
+nroff Processor commands
+.style <name> reset -> reset the specified style to its default values
+.style name attributes -> define and use the named style with the specified attributes
+.font attributes - > sets the current font for the next paragraphs
+.np -> insert a new page
 
+TODO:
+.br -> insert a new page
+.ce -> center the current line
+.ps -> fontsize command
+.B [text] -> bold text
+.I -> italic text
+.sp -> vertical space command
+
+        elif line.startswith (".spacer"):
+            self.addObject(Spacer(1, self.currentStyle.fontSize))
+        elif line.startswith (".newpage") or line.startswith (".np"):
+            self.addObject(PageBreak())
+"""
 _registry = {}
 
 
@@ -56,6 +75,7 @@ class NroffProcessor(Processor):
 
             if line.startswith('.'):
                 cmd, args_text = self._parse_command(line)
+                print (f"DEBUG: nroff command: {cmd} with args: {args_text}")
                 if cmd in ('title', 'heading', 'body'):
                     current_style = cmd
                     current_style_args = {}
@@ -71,20 +91,56 @@ class NroffProcessor(Processor):
                         continue
                     name = parts[0].lower()
                     params_text = parts[1] if len(parts) > 1 else ''
+                    # support resetting styles:
+                    #  .style reset            -> reset all styles to defaults
+                    #  .style reset <name>     -> reset specific style to defaults
+                    #  .style <name> reset     -> reset that named style to defaults
+                    if name == 'reset':
+                        target = params_text.split(None, 1)[0].lower() if params_text else None
+                        if target:
+                            if target in style_defs:
+                                style_defs[target] = {}
+                            else:
+                                print(f"WARNING: unknown style name '{target}' in .style reset")
+                        else:
+                            for k in style_defs:
+                                style_defs[k] = {}
+                        continue
+
+                    # allow '.style <name> reset' syntax as well
+                    if params_text.strip().lower() == 'reset':
+                        if name in style_defs:
+                            style_defs[name] = {}
+                        else:
+                            print(f"WARNING: unknown style name '{name}' in .style command")
+                        continue
+
                     if name not in style_defs:
                         print(f"WARNING: unknown style name '{name}' in .style command")
                         continue
                     attrs = parse_attributes(params_text)
                     style_defs[name].update(attrs)
+                    # Also make this the current active style so the next paragraph
+                    # uses the named style (with any persistent attributes).
+                    current_style = name
+                    current_style_args = {}
+                elif cmd == 'np' or cmd == 'bp': #CME added this
+                    # explicit new page or break page command
+                    items.append({'type': 'newpage'})
+                    print ("DEBUG: Adding new page for command: {cmd} in cme ssection")
                 else:
                     # unknown command: ignore
+                    print(f"DEBUG: Unknown command: {cmd}")
                     continue
                 continue
-            if line.startswith('.np'):
-                # explicit new page command
+            # vvv CME I dont think these lines work
+            if line.startswith('.np') or line.startswith('.bp'):
+                # explicit new page or break page command
                 items.append({'type': 'newpage'})
+                print(f"DEBUG: Adding new page for line: {line}")
                 # stop current page processing here (signal to renderer)
                 continue
+                # ^^^^ CME End of problem code area
 
             # build style args by combining persistent style defs and current overrides
             combined_args = dict(style_defs.get(current_style, {}))

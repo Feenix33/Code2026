@@ -1,5 +1,5 @@
 from page import Page, PageFactory
-from reportlab.platypus import Frame, Paragraph
+from reportlab.platypus import Frame, Paragraph, PageBreak
 import os
 import processors
 import logging
@@ -7,6 +7,14 @@ import sys
 
 logger = logging.getLogger(__name__)
 
+"""
+TODO
+- Fix the reset command: procesor should return a reset type and text is the style to reset
+- the font command should only work for one line and then get reset. the style_args should be cleared after use?
+- Potentiall add more heading styles for the markdown processor
+- Add the other troff commands
+
+"""
 
 @PageFactory.register("text")
 class TextPage(Page):
@@ -101,6 +109,15 @@ class TextPage(Page):
         style_kwargs.update(overrides)
         return self.buildParagraphStyle(**style_kwargs)
 
+    def addObject(self, obj):
+        if isinstance(obj, PageBreak):
+            if hasattr(self, 'book') and self.book is not None and getattr(self.book, 'addPages', False):
+                self.book.insertOverflow(self)
+            else:
+                print("WARNING: page break encountered but addPages is disabled; stopping page rendering")
+        else:
+            print(f"WARNING: unsupported object type {type(obj)} passed to addObject")
+
     def _read_and_process(self):
         if not self._file_arg:
             if self._processor:
@@ -171,9 +188,14 @@ class TextPage(Page):
             for item in text_to_render:
                 print (">> ", item)
                 if item.get('type') == 'newpage':
-                    # handle explicit new page command
-                    _attempt_add_page()
-                    break
+                    # handle explicit new page or break page command
+                    if hasattr(self, 'book') and self.book is not None and getattr(self.book, 'addPages', False):
+                        self.addObject(PageBreak())
+                        frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
+                        continue
+                    else:
+                        print("WARNING: page break encountered but addPages is disabled; stopping page rendering")
+                        break
 
                 if item.get('type') != 'paragraph':
                     continue
