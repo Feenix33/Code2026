@@ -1,5 +1,5 @@
 from page import Page, PageFactory
-from reportlab.platypus import Frame, Paragraph, PageBreak
+from reportlab.platypus import Frame, Paragraph, PageBreak, Spacer
 import os
 import processors
 import logging
@@ -82,9 +82,10 @@ class TextPage(Page):
         )
 
     def _reset_style(self, style_name):
+
         # TODO: refactor the _build_setion_styles
-        import sys
-        print(f"DEBUG: {sys._getframe().f_code.co_name}({self.debugID})Resetting style: {style_name}")
+        # import sys
+        # print(f"DEBUG: {sys._getframe().f_code.co_name}({self.debugID})Resetting style: {style_name}")
 
         base_font = self.get_style("font")
         if base_font is None:
@@ -220,10 +221,10 @@ class TextPage(Page):
             for item in text_to_render:
 
                 ############
-                if item.get("type") == "Xparagraph":
-                    print ('p', end='')
-                else:
-                    print (">> ", item)
+                # if item.get("type") == "Xparagraph":
+                #     print ('p', end='')
+                # else:
+                #     print (">> ", item)
                 ############
 
                 if item.get("type") == "newpage":
@@ -239,17 +240,36 @@ class TextPage(Page):
                 if item.get('type') == 'reset':
                     # handle reset command
                     if item.get('style') == 'all':
-                        print("DEBUG: 238 Resetting all styles to defaults")
+                        # print("DEBUG: 238 Resetting all styles to defaults")
                         self._reset_style('all')
-                    else:
-                        print(f"DEBUG: 241 Resetting style '{item.get('style')}' to defaults")
+                    # else:
+                        # print(f"DEBUG: 241 Resetting style '{item.get('style')}' to defaults")
+                    continue
+
+                if item.get('type') == 'spacer':
+                    style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
+                    obj = Spacer(1, style.spaceAfter)
+                    try:
+                        res = frame.add(obj, canvas)
+                    except Exception as e:
+                        print(f"WARNING: exception while adding spacer: {e}")
+                        _attempt_add_page()
+                        break
+                    if res == 0:
+                        _attempt_add_page()
+                        frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
+                        res = frame.add(obj, canvas)
+                        if res == 0:
+                            print("ERROR: Spacer is too large for page")
+                            sys.exit(1)
                     continue
 
                 if item.get('type') != 'paragraph':
                     continue
 
                 style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
-                print(f"DEBUG: 248 {vars(style)}")
+                # print(f"DEBUG: 248 {vars(style)}")
+                # print(f"DEBUG: 248 fontSize={style.fontSize} spaceAfter={style.spaceAfter} leading={style.leading}")
                 obj = Paragraph(item.get('text', ''), style)
                 try:
                     res = frame.add(obj, canvas)
