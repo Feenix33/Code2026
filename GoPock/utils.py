@@ -100,9 +100,26 @@ def read_page_specs(filename):
                 attrs.update(parse_attributes(block_line))
         else:
             parts = shlex.split(line)
-            page_type = parts[0]
-            attrs_text = line[len(page_type):]
-            attrs = parse_attributes(attrs_text)
+            # Support shorthand: "processor filename [path]"
+            # e.g. "froff text01.txt" -> equivalent to:
+            # text { file=text01.txt processor=froff }
+            try:
+                # Import processors lazily to avoid circular import at module load
+                import processors as _processors
+                proc_names = set(k.lower() for k in getattr(_processors, '_registry', {}).keys())
+            except Exception:
+                proc_names = set()
+
+            if len(parts) >= 2 and parts[0].lower() in proc_names and '=' not in parts[1]:
+                page_type = 'text'
+                attrs = {'file': parts[1], 'processor': parts[0]}
+                if len(parts) >= 3:
+                    # optional path argument
+                    attrs['path'] = parts[2]
+            else:
+                page_type = parts[0]
+                attrs_text = line[len(page_type):]
+                attrs = parse_attributes(attrs_text)
 
         specs.append(PageSpec(page_type=page_type, attrs=attrs, line_number=spec_start_line))
 
