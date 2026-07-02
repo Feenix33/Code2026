@@ -141,7 +141,7 @@ class Page(ABC):
         if leading is None:
             leading = int(fontSize * 1.2)
         if spaceAfter is None:
-            spaceAfter = int(fontSize * 1.2)
+            spaceAfter = int(fontSize) #cme decide if font or slightly larger= * 1.2)
             # print (f"DEBUG: Paragraph style {name} created with fontsize={fontSize} spacing set automatically")
         tempAlign = alignment if align is None else self.alignmentStrToEnum(align.lower())
         return ParagraphStyle(

@@ -17,14 +17,18 @@ from utils import read_page_specs, build_book
 
 """
 Main TODO:
+Add other styles: headings and recipe
+Refactor recipe processor to remove duplicate code
+Add text stripper and abbreviator for recipe processor
+Keyword in input file for recipe files
+Recipe processor first line is title, if starts w/# then use filename as title
 
-- Text processor
-    - Style commands
-    - Text add page as needed
-    - Other processors
-
+- Command reference
 - Tracker
 - Dice page
+- Proper n/troff processor w/inlines
+- Recipe processor w/cleaner and abbreviator
+
 
 Hints:
 ================================================================================================
@@ -40,7 +44,10 @@ def my_awesome_function():
 
     import sys
     print(f"DEBUG {sys._getframe().f_code.co_name}({self.debugID}) ")
-
+================================================================================================
+Line number
+import inspect
+{inspect.currentframe().f_lineno}
 ================================================================================================
 strftime
 Years & Months: 

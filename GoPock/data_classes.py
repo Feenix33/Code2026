@@ -39,6 +39,7 @@ class PageStyle:
 class BookletStyle:
     margin: int = 10
     nameOut: str = "GoPock.pdf"
+    useRecipeAbbreviations: bool = False
 
 @dataclass
 class PageSpec:

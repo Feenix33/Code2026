@@ -1,11 +1,16 @@
 from page import Page, PageFactory
 from reportlab.platypus import Frame, Paragraph, PageBreak, Spacer
+from reportlab.lib import colors
 import os
 import processors
 import logging
 import sys
+import inspect
+
+from style_registry import KNOWN_PARAGRAPH_STYLES, paragraph_style_configs
 
 logger = logging.getLogger(__name__)
+dbgINFO = True # print INFO messages or not
 
 """
 TODO
@@ -37,9 +42,7 @@ class TextPage(Page):
         self._last_mtime = None
         self._last_processed = None
 
-        self._body_style = None
-        self._heading_style = None
-        self._title_style = None
+        self._paragraph_styles = None
 
     def _resolve_full_path(self, file_arg, path_arg):
         if not file_arg:
@@ -61,10 +64,23 @@ class TextPage(Page):
             base = os.path.dirname(__file__)
         return os.path.join(base, file_expanded)
 
+    def _ensure_paragraph_styles(self):
+        if self._paragraph_styles is None:
+            self._build_section_styles()
+        return self._paragraph_styles
+
+    def _section_style_definitions(self, base_kwargs):
+        styles = paragraph_style_configs(base_kwargs)
+        return {
+            style_name: self.buildParagraphStyle(**style_kwargs)
+            for style_name, style_kwargs in styles.items()
+        }
+
     def _build_section_styles(self):
+        from data_classes import Font
+
         base_font = self.get_style("font")
         if base_font is None:
-            from data_classes import Font
             base_font = Font()
 
         base_kwargs = {
@@ -73,23 +89,36 @@ class TextPage(Page):
             'textColor': base_font.color,
         }
 
-        self._body_style = self.buildParagraphStyle(**base_kwargs, name='BBody')
-        self._heading_style = self.buildParagraphStyle(
-            **{**base_kwargs, 'fontSize': base_font.size * 1.2,},name='HHeading'
+        self._paragraph_styles = self._section_style_definitions(base_kwargs)
+
+    def _normalize_style_name(self, style_name):
+        if style_name is None:
+            return 'body'
+
+        normalized = str(style_name).lower()
+        if normalized in self._ensure_paragraph_styles():
+            return normalized
+
+        logger.warning(
+            "Unknown paragraph style '%s' in paragraph; defaulting to body. Available styles: %s",
+            style_name,
+            ', '.join(sorted(KNOWN_PARAGRAPH_STYLES)),
         )
-        self._title_style = self.buildParagraphStyle(
-            **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center', 'textColor': 'blue'}, name='TTitle'
-        )
+        return 'body'
 
     def _reset_style(self, style_name):
+        if style_name == 'all':
+            self._paragraph_styles = None
+            return
 
-        # TODO: refactor the _build_setion_styles
-        # import sys
-        # print(f"DEBUG: {sys._getframe().f_code.co_name}({self.debugID})Resetting style: {style_name}")
+        normalized = self._normalize_style_name(style_name)
+        self._paragraph_styles[normalized] = self._build_style_by_name(normalized)
+
+    def _build_style_by_name(self, style_name):
+        from data_classes import Font
 
         base_font = self.get_style("font")
         if base_font is None:
-            from data_classes import Font
             base_font = Font()
 
         base_kwargs = {
@@ -98,26 +127,11 @@ class TextPage(Page):
             'textColor': base_font.color,
         }
 
-        if style_name == 'all' or style_name == 'body':
-            self._body_style = self.buildParagraphStyle(**base_kwargs, name='BBody')
-        if style_name == 'all' or style_name == 'heading':
-            self._heading_style = self.buildParagraphStyle(
-                **{**base_kwargs, 'fontSize': base_font.size * 1.2,},name='HHeading'
-            )
-        if style_name == 'all' or style_name == 'title':
-            self._title_style = self.buildParagraphStyle(
-                **{**base_kwargs, 'fontSize': base_font.size * 1.2, 'align': 'center', 'textColor': 'blue'}, name='TTitle'
-            )
+        return self._section_style_definitions(base_kwargs).get(style_name, self._section_style_definitions(base_kwargs)['body'])
 
     def _get_paragraph_style(self, style_name, overrides=None):
-        if self._body_style is None:
-            self._build_section_styles()
-
-        base_style = {
-            'body': self._body_style,
-            'heading': self._heading_style,
-            'title': self._title_style,
-        }.get(style_name, self._body_style)
+        styles = self._ensure_paragraph_styles()
+        base_style = styles.get(self._normalize_style_name(style_name), styles['body'])
 
         if not overrides:
             return base_style
@@ -156,7 +170,16 @@ class TextPage(Page):
             if self._processor:
                 proc_obj = processors.get(self._processor)
                 if proc_obj:
-                    return proc_obj.process(self.text)
+                    use_abbrev = False
+                    if hasattr(self, 'book') and self.book is not None:
+                        use_abbrev = getattr(self.book.config, 'useRecipeAbbreviations', False)
+                    return proc_obj.process(
+                        self.text,
+                        source_path=None,
+                        page=self,
+                        book=self.book,
+                        use_abbreviations=use_abbrev,
+                    )
             return self.text
 
         full_path = self._resolve_full_path(self._file_arg, self._path_arg)
@@ -182,7 +205,16 @@ class TextPage(Page):
         if self._processor:
             proc_obj = processors.get(self._processor)
             if proc_obj:
-                processed = proc_obj.process(content)
+                use_abbrev = False
+                if hasattr(self, 'book') and self.book is not None:
+                    use_abbrev = getattr(self.book.config, 'useRecipeAbbreviations', False)
+                processed = proc_obj.process(
+                    content,
+                    source_path=full_path,
+                    page=self,
+                    book=self.book,
+                    use_abbreviations=use_abbrev,
+                )
             else:
                 processed = content
         else:
@@ -210,7 +242,7 @@ class TextPage(Page):
                     # cme attempt to fix the issue
                     # print("Attempting overflow insertion")
                     self.book.insertOverflow(self)
-                    print(f"INFO: Added new page of type {self.__class__.__name__} due to content overflow or .np command")
+                    if dbgINFO: print(f"INFO: Added new page of type {self.__class__.__name__} due to content overflow or .np command")
                 except Exception as e:
                     print(f"WARNING: failed to add new page automatically: {e}")
             else:
@@ -218,14 +250,10 @@ class TextPage(Page):
                 print("WARNING: content overflow on page {self.debugID} incomplete rendering")
 
         if isinstance(text_to_render, list):
+            # dbgI = 1
             for item in text_to_render:
-
-                ############
-                # if item.get("type") == "Xparagraph":
-                #     print ('p', end='')
-                # else:
-                #     print (">> ", item)
-                ############
+                # print (f"[{dbgI}] {item}")
+                # dbgI += 1
 
                 if item.get("type") == "newpage":
                     # handle explicit new page or break page command
@@ -243,12 +271,13 @@ class TextPage(Page):
                         # print("DEBUG: 238 Resetting all styles to defaults")
                         self._reset_style('all')
                     # else:
-                        # print(f"DEBUG: 241 Resetting style '{item.get('style')}' to defaults")
+                    # print(f"DEBUG: 241 Resetting style '{item.get('style')}' to defaults")
                     continue
 
                 if item.get('type') == 'spacer':
                     style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
-                    obj = Spacer(1, style.spaceAfter)
+                    # obj = Spacer(1, style.spaceAfter)
+                    obj = Spacer(1, style.fontSize)  # cme adjust to font size instead of spaceAfter
                     try:
                         res = frame.add(obj, canvas)
                     except Exception as e:
@@ -268,13 +297,16 @@ class TextPage(Page):
                     continue
 
                 style = self._get_paragraph_style(item.get('style', 'body'), item.get('style_args'))
+
                 # print(f"DEBUG: 248 {vars(style)}")
                 # print(f"DEBUG: 248 fontSize={style.fontSize} spaceAfter={style.spaceAfter} leading={style.leading}")
                 obj = Paragraph(item.get('text', ''), style)
                 try:
                     res = frame.add(obj, canvas)
                 except Exception as e:
-                    print(f"WARNING: exception while adding paragraph: {e}")
+                    print(
+                        f"WARNING {inspect.currentframe().f_lineno}: exception while adding paragraph: {e}"
+                    )
                     _attempt_add_page()
                     break
 
@@ -296,7 +328,10 @@ class TextPage(Page):
             try:
                 res = frame.add(obj, canvas)
             except Exception as e:
-                print(f"WARNING: exception while adding paragraph: {e}")
+
+                print(
+                    f"WARNING {inspect.currentframe().f_lineno}: exception while adding paragraph: {e}"
+                )
                 _attempt_add_page()
                 return
             if res == 0:

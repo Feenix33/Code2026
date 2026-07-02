@@ -1,10 +1,21 @@
 from abc import ABC, abstractmethod
+import os
 import sys
+import unicodedata
 from xml.sax.saxutils import escape
 import re
 from utils import parse_attributes
+from style_registry import DEFAULT_PARAGRAPH_STYLE_NAME, DEFAULT_PARAGRAPH_STYLE_FOR_RECIPE
+
+NON_PRINTING_REPLACEMENTS = {
+    '\u00BD': '1/2',
+    '\u00BC': '1/4',
+    '\u00BE': '3/4',
+    '\u00B0': '',
+    '\u00A0': ' ',
+}
 """
-nroff Processor commands
+froff Processor commands
 .style <name> reset -> reset the specified style to its default values
 .style name attributes -> define and use the named style with the specified attributes
 .font attributes - > sets the current font for the next paragraphs
@@ -17,6 +28,29 @@ Not going to do these as the formatter is interpreting the line breaks incorrect
 .ps -> fontsize command
 .B [text] -> bold text
 .I -> italic text
+
+
+markdown Processor Commands
+# Header 1
+## H2
+### H3
+
+H4-H6 = H3 in formatting
+
+Alternative
+H1       H2
+==       --
+
+*italics*  OR _italics_
+**bold**  OR __bold__
+**_bold italic_**
+~~strikethrough~~
+1. List item (numbered, the numnber at front does not matter)
+* unordered list item (bullet list)
++ unordered list item
+- unordered list item
+[link] ignore since this is print
+''' start or end a code block, shift font to Courier, but ignore all other formatting for code and inline code
 
 """
 _registry = {}
@@ -37,12 +71,27 @@ def get(name):
 
 class Processor(ABC):
     @abstractmethod
-    def process(self, text: str):
+    def process(self, text: str, *, source_path=None, page=None, book=None, use_abbreviations=None):
         pass
 
+    def _clean_text(self, text):
+        if text is None:
+            return ''
 
-@register('nroff')
-class NroffProcessor(Processor):
+        line = str(text)
+        for source, target in NON_PRINTING_REPLACEMENTS.items():
+            line = line.replace(source, target)
+
+        normalized = unicodedata.normalize('NFKD', line)
+        line = normalized.encode('ascii', 'ignore').decode('ascii')
+        return line
+
+"""
+This is the fake nroff (froff) formatter
+Similar to nroff but the <CR> in the input file signals a new paragraph
+"""
+@register('froff')
+class FroffProcessor(Processor):
     def _parse_command(self, raw_line):
         tokens = raw_line.split(None, 1)
         cmd = tokens[0][1:].lower()
@@ -89,84 +138,65 @@ class NroffProcessor(Processor):
         # 5. If fontSize wasn't found, return the string unchanged
         return text_str
 
-    def process(self, text: str):
-        lines = text.splitlines()
+    def _process_lines(self, lines, default_style='body'):
         items = []
-        current_style = 'body'
+        current_style = default_style
         current_style_args = {}
-        # persistent style definitions for title/heading/body
-        style_defs = {'title': {}, 'heading': {}, 'body': {}}
-
+        style_defs = {}
         center_remaining = 0
 
         for raw_line in lines:
-            line = raw_line.strip()
-            if not line:
+            line = raw_line.rstrip('\r\n')
+            stripped_line = line.strip()
+
+            if not stripped_line:
                 continue
 
-            if line.startswith('.'):
-                cmd, args_text = self._parse_command(line)
-                # print (f"DEBUG: nroff command: {cmd} with args: {args_text}")
+            if stripped_line.startswith('.'):
+                cmd, args_text = self._parse_command(stripped_line)
                 if cmd in ('title', 'heading', 'body'):
                     current_style = cmd
                     current_style_args = {}
                 elif cmd == 'font':
-                    # font modifies only the next paragraphs until changed
                     args = parse_attributes(args_text)
                     current_style_args.update(args)
                 elif cmd == 'style':
-                    # .style name params -> redefine persistent style for rest of doc
                     parts = args_text.split(None, 1)
                     if not parts:
-                        # print(f"WARNING: .style requires a name and parameters: '{raw_line}'")
                         continue
+
                     name = parts[0].lower()
                     params_text = parts[1] if len(parts) > 1 else ''
-                    # import sys
-                    # print(f"DEBUG {sys._getframe().f_code.co_name}({params_text}) parts={parts}, {type(parts)}")
                     if len(params_text) > 1:
                         params_text = self._process_font_spacing(params_text)
-                        # print(f"++++  parts={parts}, {type(params_text)}")
 
-                    # support resetting styles:
-                    #  .style reset            -> reset all styles to defaults
-                    #  .style reset <name>     -> reset specific style to defaults
-                    #  .style <name> reset     -> reset that named style to defaults
                     if name == 'reset':
                         target = params_text.split(None, 1)[0].lower() if params_text else None
                         if target:
-                            # print(f"DEBUG: Reset 1 target={target}")
-                            if target in style_defs:
-                                style_defs[target] = {}
-                            else:
-                                print(f"WARNING: unknown style name '{target}' in .style reset")
+                            style_defs[target] = {}
                         else:
-                            for k in style_defs:
-                                style_defs[k] = {}
-
+                            style_defs.clear()
                         continue
 
-                    # allow '.style <name> reset' syntax as well
                     if params_text.strip().lower() == 'reset':
-                        if name in style_defs:
-                            style_defs[name] = {}
-                            # print(f"DEBUG: Reset 2 name={name}")
-                            items.append({'type': 'reset', 'style':name})
-                            current_style_args = {}
-                        else:
-                            print(f"WARNING: unknown style name '{name}' in .style command")
+                        style_defs[name] = {}
+                        items.append({'type': 'reset', 'style': name})
+                        current_style = name
+                        current_style_args = {}
                         continue
 
-                    if name not in style_defs:
-                        print(f"WARNING: unknown style name '{name}' in .style command")
+                    if not params_text:
+                        style_defs.setdefault(name, {})
+                        current_style = name
+                        current_style_args = {}
                         continue
+
                     attrs = parse_attributes(params_text)
+                    style_defs.setdefault(name, {})
                     style_defs[name].update(attrs)
-                    # Also make this the current active style so the next paragraph
-                    # uses the named style (with any persistent attributes).
                     current_style = name
                     current_style_args = {}
-                elif cmd == 'ce': # Center the next line
+                elif cmd == 'ce':
                     count = 1
                     if args_text:
                         try:
@@ -191,38 +221,35 @@ class NroffProcessor(Processor):
                             'style': current_style,
                             'style_args': combined_args.copy(),
                         })
-                elif cmd == 'np' or cmd == 'bp': #CME added this
-                    # explicit new page or break page command
+                elif cmd in ('np', 'bp', 'br'):
                     items.append({'type': 'newpage'})
-                    # print ("DEBUG: Adding new page for command: {cmd} in cme ssection")
                 else:
-                    # unknown command: ignore
-                    # print(f"DEBUG: Unknown command: {cmd}")
                     continue
                 continue
-            # vvv CME I dont think these lines work
-            if line.startswith('.np') or line.startswith('.bp'):
-                # explicit new page or break page command
-                items.append({'type': 'newpage'})
-                # print(f"DEBUG: Adding new page for line: {line}")
-                # stop current page processing here (signal to renderer)
-                continue
-                # ^^^^ CME End of problem code area
 
-            # build style args by combining persistent style defs and current overrides
+            if stripped_line.startswith('.np') or stripped_line.startswith('.bp'):
+                items.append({'type': 'newpage'})
+                continue
+
             combined_args = dict(style_defs.get(current_style, {}))
             combined_args.update(current_style_args)
             if center_remaining > 0:
                 combined_args['align'] = 'center'
                 center_remaining -= 1
-            items.append(self._make_paragraph(line, current_style, combined_args.copy()))
+            clean_line = self._clean_text(stripped_line)
+            items.append(self._make_paragraph(clean_line, current_style, combined_args.copy()))
 
         return items
 
+    def process(self, text: str, *, source_path=None, page=None, book=None, use_abbreviations=None):
+        return self._process_lines(text.splitlines(), default_style=DEFAULT_PARAGRAPH_STYLE_NAME)
+
+
+_registry['nroff'] = _registry['froff']
 
 @register('markdown')
 class MarkdownProcessor(Processor):
-    def process(self, text: str) -> str:
+    def process(self, text: str, *, source_path=None, page=None, book=None, use_abbreviations=None) -> str:
         s = escape(text)
         s = re.sub(r'^# (.+)$', r'<b>\1</b><br/>', s, flags=re.M)
         s = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', s)
@@ -233,8 +260,201 @@ class MarkdownProcessor(Processor):
 
 @register('recipe')
 class RecipeProcessor(Processor):
-    def process(self, text: str) -> str:
-        s = escape(text)
-        s = re.sub(r'(?m)^\* (.+)$', r'<b>\1</b><br/>', s)
-        s = s.replace('\n', '<br/>')
-        return s
+    DEFAULT_RECIPE_ABBREVIATIONS = {
+        'cups': 'c',
+        'cup': 'c',
+        'teaspoons': 'tsp',
+        'teaspoon': 'tsp',
+        'tablespoons': 'Tbl',
+        'tablespoon': 'Tbl',
+        'preheat': '',
+        'ounces': 'oz',
+        'ounce': 'oz',
+        'small': 'sml',
+        'medium': 'med',
+        'large': 'lg',
+        'pound': 'lb',
+        'minute': 'min',
+        'minutes': 'min',
+        'hour': 'hr',
+        'seconds': 'sec',
+    }
+
+    def _parse_command(self, raw_line):
+        tokens = raw_line.split(None, 1)
+        cmd = tokens[0][1:].lower()
+        args_text = tokens[1] if len(tokens) > 1 else ""
+        return cmd, args_text
+
+    def _make_paragraph(self, text, style_name, style_args):
+        return {
+            'type': 'paragraph',
+            'text': self._clean_text(text),
+            'style': style_name,
+            'style_args': style_args or {},
+        }
+
+    def _apply_abbreviations(self, line, abbreviations):
+        if not abbreviations:
+            return line
+
+        pattern = re.compile(r"\b(" + "|".join(re.escape(k) for k in abbreviations) + r")\b", re.IGNORECASE)
+
+        def replace(match):
+            return abbreviations[match.group(1).lower()]
+
+        return pattern.sub(replace, line)
+
+    def _process_lines(self, lines, default_style='line', source_path=None, use_abbreviations=False):
+        items = []
+        current_style = default_style
+        current_style_args = {}
+        style_defs = {}
+        abbreviations = dict(self.DEFAULT_RECIPE_ABBREVIATIONS)
+
+        title_emitted = False
+        title_source_name = os.path.splitext(os.path.basename(source_path))[0] if source_path else 'Recipe'
+        center_remaining = 0
+
+        for raw_line in lines:
+            line = raw_line.rstrip('\r\n')
+            stripped_line = line.strip()
+
+            if stripped_line.startswith('.'):
+                cmd, args_text = self._parse_command(stripped_line)
+                if cmd in ('title', 'heading', 'body'):
+                    current_style = cmd
+                    current_style_args = {}
+                elif cmd == 'font':
+                    args = parse_attributes(args_text)
+                    current_style_args.update(args)
+                elif cmd == 'style':
+                    parts = args_text.split(None, 1)
+                    if not parts:
+                        continue
+
+                    name = parts[0].lower()
+                    params_text = parts[1] if len(parts) > 1 else ''
+                    if len(params_text) > 1:
+                        params_text = self._process_font_spacing(params_text)
+
+                    if name == 'reset':
+                        target = params_text.split(None, 1)[0].lower() if params_text else None
+                        if target:
+                            style_defs[target] = {}
+                        else:
+                            style_defs.clear()
+                        continue
+
+                    if params_text.strip().lower() == 'reset':
+                        style_defs[name] = {}
+                        items.append({'type': 'reset', 'style': name})
+                        current_style = name
+                        current_style_args = {}
+                        continue
+
+                    if not params_text:
+                        style_defs.setdefault(name, {})
+                        current_style = name
+                        current_style_args = {}
+                        continue
+
+                    attrs = parse_attributes(params_text)
+                    style_defs.setdefault(name, {})
+                    style_defs[name].update(attrs)
+                    current_style = name
+                    current_style_args = {}
+                elif cmd == 'abbrev':
+                    if args_text.strip().lower() == 'reset':
+                        abbreviations = dict(self.DEFAULT_RECIPE_ABBREVIATIONS)
+                        continue
+                    abbreviations.update(parse_attributes(args_text))
+                elif cmd == 'ce':
+                    count = 1
+                    if args_text:
+                        try:
+                            count = int(args_text.strip())
+                        except ValueError:
+                            print(f"WARNING: invalid .ce count '{args_text}', defaulting to 1")
+                            count = 1
+                    center_remaining = max(1, count)
+                elif cmd == 'sp':
+                    count = 1
+                    if args_text:
+                        try:
+                            count = int(args_text.strip())
+                        except ValueError:
+                            print(f"WARNING: invalid .sp count '{args_text}', defaulting to 1")
+                            count = 1
+                    combined_args = dict(style_defs.get(current_style, {}))
+                    combined_args.update(current_style_args)
+                    for _ in range(max(1, count)):
+                        items.append({
+                            'type': 'spacer',
+                            'style': current_style,
+                            'style_args': combined_args.copy(),
+                        })
+                elif cmd in ('np', 'bp', 'br'):
+                    items.append({'type': 'newpage'})
+                else:
+                    continue
+                continue
+
+            if stripped_line.startswith('.np') or stripped_line.startswith('.bp'):
+                items.append({'type': 'newpage'})
+                continue
+
+            if not title_emitted:
+                if stripped_line and stripped_line[0].isalpha():
+                    title_text = self._clean_text(stripped_line)
+                    if use_abbreviations:
+                        title_text = self._apply_abbreviations(title_text, abbreviations)
+                    items.append(self._make_paragraph(title_text, 'title2', {}))
+                    items.append({'type': 'spacer', 'style': 'line', 'style_args': {}})
+                    title_emitted = True
+                    continue
+
+                title_text = title_source_name
+                items.append(self._make_paragraph(title_text, 'title2', {}))
+                items.append({'type': 'spacer', 'style': 'line', 'style_args': {}})
+                title_emitted = True
+
+                if stripped_line:
+                    cleaned_line = self._clean_text(stripped_line)
+                    if use_abbreviations:
+                        cleaned_line = self._apply_abbreviations(cleaned_line, abbreviations)
+                    combined_args = dict(style_defs.get(current_style, {}))
+                    combined_args.update(current_style_args)
+                    if center_remaining > 0:
+                        combined_args['align'] = 'center'
+                        center_remaining -= 1
+                    items.append(self._make_paragraph(cleaned_line, 'line', combined_args.copy()))
+                continue
+
+            if not stripped_line:
+                items.append({'type': 'spacer', 'style': 'line', 'style_args': {}})
+                continue
+
+            cleaned_line = self._clean_text(stripped_line)
+            if use_abbreviations:
+                cleaned_line = self._apply_abbreviations(cleaned_line, abbreviations)
+            combined_args = dict(style_defs.get(current_style, {}))
+            combined_args.update(current_style_args)
+            if center_remaining > 0:
+                combined_args['align'] = 'center'
+                center_remaining -= 1
+            items.append(self._make_paragraph(cleaned_line, 'line', combined_args.copy()))
+
+        return items
+
+    def process(self, text: str, *, source_path=None, page=None, book=None, use_abbreviations=None):
+        if use_abbreviations is None and book is not None:
+            use_abbreviations = getattr(book.config, 'useRecipeAbbreviations', False)
+        if use_abbreviations is None:
+            use_abbreviations = False
+        return self._process_lines(
+            text.splitlines(),
+            default_style=DEFAULT_PARAGRAPH_STYLE_FOR_RECIPE,
+            source_path=source_path,
+            use_abbreviations=use_abbreviations,
+        )
