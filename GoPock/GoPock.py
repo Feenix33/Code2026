@@ -17,17 +17,11 @@ from utils import read_page_specs, build_book
 
 """
 Main TODO:
-Add other styles: headings and recipe
-Refactor recipe processor to remove duplicate code
-Add text stripper and abbreviator for recipe processor
-Keyword in input file for recipe files
-Recipe processor first line is title, if starts w/# then use filename as title
-
-- Command reference
 - Tracker
 - Dice page
 - Proper n/troff processor w/inlines
-- Recipe processor w/cleaner and abbreviator
+- markdown processor
+- daily page
 
 
 Hints:

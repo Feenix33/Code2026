@@ -165,7 +165,7 @@ class TextPage(Page):
         else:
             print(f"WARNING: unsupported object type {type(obj)} passed to addObject")
 
-    def _read_and_process(self):
+    def ORIGIANL_read_and_process(self):
         if not self._file_arg:
             if self._processor:
                 proc_obj = processors.get(self._processor)
@@ -226,6 +226,75 @@ class TextPage(Page):
             self._last_processed = processed
 
         return processed
+
+    ## vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+    def _read_and_process(self):
+        # Gather runtime configuration attributes
+        use_abbrev = False
+        if hasattr(self, "book") and self.book is not None:
+            use_abbrev = getattr(self.book.config, "useRecipeAbbreviations", False)
+
+        passed_title = self.title if self.title != "Generic Text Page" else None
+
+        # --- Branch A: Direct String Content Processing ---
+        if not self._file_arg:
+            if self._processor:
+                proc_obj = get(self._processor)
+                if proc_obj:
+                    return proc_obj.process(
+                        self.text, use_abbreviations=use_abbrev, title=passed_title
+                    )
+            return self.text
+
+        # --- Branch B: File System I/O Processing ---
+        full_path = self._resolve_full_path(self._file_arg, self._path_arg)
+        if not full_path:
+            return "Error: no file specified"
+
+        try:
+            mtime = os.path.getmtime(full_path)
+        except Exception as e:
+            logger.warning("Cannot stat file %s: %s", full_path, e)
+            return f"Error: cannot access file {self._file_arg}: {e}"
+
+        # Cache check hit
+        if (
+            self._cache_enabled
+            and self._last_full_path == full_path
+            and self._last_mtime == mtime
+        ):
+            return self._last_processed
+
+        # Content ingestion
+        try:
+            with open(full_path, "r", encoding="utf-8") as fh:
+                file_content = fh.read()
+        except Exception as e:
+            logger.warning("Cannot read file %s: %s", full_path, e)
+            return f"Error: cannot read file {self._file_arg}: {e}"
+
+        # Execute Processor if configured
+        if self._processor:
+            proc_obj = processors.get(self._processor)
+            if proc_obj:
+                processed = proc_obj.process(
+                    file_content, use_abbreviations=use_abbrev, title=passed_title
+                )
+            else:
+                processed = file_content
+        else:
+            processed = file_content
+
+        # Cache retention write
+        if self._cache_enabled:
+            self._last_full_path = full_path
+            self._last_mtime = mtime
+            self._last_processed = processed
+
+        return processed
+
+    ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     def draw(self, canvas):
         mgn = 10
