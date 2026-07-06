@@ -300,6 +300,7 @@ class TextPage(Page):
         mgn = 10
         frame = Frame(mgn, mgn, self.max.x - mgn, self.max.y - mgn, showBoundary=1)
         text_to_render = self._read_and_process()
+        # print(f"DEBUG {sys._getframe().f_code.co_name}({self.debugID}) {len(text_to_render)})")
 
         # Helper to attempt adding a new page when requested or on error
         def _attempt_add_page():
@@ -323,6 +324,13 @@ class TextPage(Page):
             for item in text_to_render:
                 # print (f"[{dbgI}] {item}")
                 # dbgI += 1
+
+                if item.get("type") not in ("paragraph", "spacer", "newpage", "reset"):
+                    print(
+                        f"WARNING: unrecognized item type '{item.get('type')}' in page {self.debugID} skipping"
+                    )
+                    # print (f"DEBUG: {item}")
+                    # continue
 
                 if item.get("type") == "newpage":
                     # handle explicit new page or break page command

@@ -261,6 +261,15 @@ class RecipeProcessor(Processor):
         "tablespoon": "Tbl",
         "ounces": "oz",
         "ounce": "oz",
+        "pounds": "lb",
+        "pound": "lb",
+        "medium": "med",
+        "large": "lg",
+        "small": "sm",
+        "minute": "min",
+        "minutes": "min",
+        "hour": "hr",
+        "hours": "hr",
     }
 
     def _reset_state(self, **kwargs):
@@ -404,23 +413,13 @@ class TroffProcessor(Processor):
 
     def _apply_substitutions(self, line: str) -> str:
         """
-        Translates classic inline Troff escape string modifiers into standard HTML tokens.
-        Example: \\fBword\\fR -> <b>word</b>
+        Translates classic inline Troff escape strings into valid, balanced HTML tags.
+        Example: \\fIitalicized\\fR -> <i>italicized</i>
         """
         if not line:
             return line
 
-        # 1. Map Troff inline escape strings into corresponding target layout formats
-        line = (
-            line.replace(r"\fB", "<b>")
-            .replace(r"\f(BI", "<b><i>")
-            .replace(r"\fB", "<b>")
-        )
-        line = line.replace(r"\fI", "<i>").replace(
-            r"\fR", "</b></i></b>"
-        )  # Close all tags safely
-
-        # 2. Maintain context awareness for full-line block typography settings
+        # 1. Block-level fallback formatting (if .ft macro was used)
         if self._current_font_modifier == "B":
             line = f"<b>{line}</b>"
         elif self._current_font_modifier == "I":
@@ -428,7 +427,34 @@ class TroffProcessor(Processor):
         elif self._current_font_modifier == "BI":
             line = f"<b><i>{line}</i></b>"
 
-        return line
+        # 2. Parse inline Troff escape tokens chronologically to maintain balanced HTML
+        tokens = re.split(r"(\\fB|\\fI|\\f\(BI|\\fR)", line)
+        processed_segments = []
+        open_tags = []
+
+        for token in tokens:
+            if token == r"\fB":
+                processed_segments.append("<b>")
+                open_tags.append("</b>")
+            elif token == r"\fI":
+                processed_segments.append("<i>")
+                open_tags.append("</i>")
+            elif token == r"\f(BI":
+                processed_segments.append("<b><i>")
+                open_tags.append("</i></b>")
+            elif token == r"\fR":
+                # Pop and close only the tags that are currently open
+                if open_tags:
+                    processed_segments.append(open_tags.pop())
+            else:
+                # Regular text segment
+                processed_segments.append(token)
+
+        # Safety flush: Close any tags left open at the end of the line string
+        while open_tags:
+            processed_segments.append(open_tags.pop())
+
+        return "".join(processed_segments)
 
     def _accumulate_or_build_paragraph(self, line: str):
         """Accumulates continuous multi-line input strings into layout tokens."""
