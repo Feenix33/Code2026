@@ -491,3 +491,143 @@ class TroffProcessor(Processor):
 
         # Clear local buffer array for next document paragraph sequence
         self._text_buffer.clear()
+
+####=================================================================================================================
+@register("markdown")
+class MarkdownProcessor(Processor):
+    """
+    Structured Markdown document parser utilizing block state tracking
+    to convert markup lines into explicit layout paragraph structures.
+    """
+
+    def _reset_state(self, **kwargs):
+        super()._reset_state(**kwargs)
+        self.current_style = "body"
+
+        # State machine tracking for structural blocks
+        self._in_code_block = False
+        self._list_counters = {}  # Tracks depth and item positions
+
+    def _is_command(self, line: str) -> bool:
+        """
+        Markdown doesn't use standard dot commands, but structural boundaries
+        (like code fences or blank lines) serve a similar pipeline function.
+        """
+        stripped = line.strip()
+        # Code block fence rules or paragraph breaks
+        if stripped.startswith("```") or not stripped:
+            return True
+        return False
+
+    def _handle_command(self, line: str):
+        """Manages code blocks and flushes text buffers on layout changes."""
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            # Code block opening or closing boundary
+            self._flush_buffer()
+            self._in_code_block = not self._in_code_block
+            return
+
+        if not stripped:
+            # Empty line indicates a regular paragraph break
+            self._flush_buffer()
+
+    def _apply_substitutions(self, line: str) -> str:
+        """Translates classic text styling modifiers into valid HTML elements."""
+        if not line:
+            return line
+
+        # 1. Handle Inline Hyperlinks: Extract the visible label, skip the address url
+        line = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", line)
+
+        # 2. Bold syntax transformations
+        line = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", line)
+        line = re.sub(r"__(.+?)__", r"<b>\1</b>", line)
+
+        # 3. Italic syntax transformations
+        line = re.sub(r"\*(.+?)\*", r"<i>\1</i>", line)
+        line = re.sub(r"_(.+?)_", r"<i>\1</i>", line)
+
+        # 4. Strikethrough syntax transformation
+        line = re.sub(r"~~(.+?)~~", r"<strike>\1</strike>", line)
+
+        return line
+
+    def _accumulate_or_build_paragraph(self, line: str):
+        """Analyzes structured markdown lines to append into multi-line tokens."""
+        # 1. Active Code Block Guard
+        if self._in_code_block:
+            # Emit each code statement as an isolated block due to text_page rules
+            token = self._make_paragraph_token(line, "code", {})
+            self.output_items.append(token)
+            return
+
+        stripped = line.strip()
+
+        # 2. Horizontal Rules Handling
+        if re.match(r"^(?:-{3,}|\*{3,}|_{3,})$", stripped):
+            self._flush_buffer()
+            self.output_items.append(
+                {"type": "spacer", "style": "body", "style_args": {}}
+            )
+            return
+
+        # 3. Heading Commands (# Prefix)
+        if stripped.startswith("#"):
+            self._flush_buffer()
+            # Count leading octothorpes to determine target style tier
+            level = len(stripped) - len(stripped.lstrip("#"))
+            title_text = stripped.lstrip("#").strip()
+
+            style_tier = f"heading{level}" if level <= 3 else "heading4"
+
+            token = self._make_paragraph_token(title_text, style_tier, {})
+            self.output_items.append(token)
+            return
+
+        # 4. Bulleted Lists Check
+        if stripped.startswith(("* ", "- ", "+ ")):
+            self._flush_buffer()
+            item_text = stripped[2:].strip()
+            token = self._make_paragraph_token(item_text, "bullet", {})
+            self.output_items.append(token)
+            return
+
+        # 5. Numbered Lists Check
+        match_numbered = re.match(r"^(\d+)\.\s+(.*)$", stripped)
+        if match_numbered:
+            self._flush_buffer()
+            item_text = match_numbered.group(2).strip()
+
+            # Dynamically track layout list counter index values
+            list_id = "main_sequence"
+            current_count = self._list_counters.get(list_id, 0) + 1
+            self._list_counters[list_id] = current_count
+
+            numbered_text = f"{current_count}. {item_text}"
+            token = self._make_paragraph_token(numbered_text, "body", {})
+            self.output_items.append(token)
+            return
+
+        # 6. Blockquotes Handling
+        if stripped.startswith("> "):
+            self._flush_buffer()
+            quote_text = stripped[2:].strip()
+            token = self._make_paragraph_token(quote_text, "body", {"leftIndent": 15})
+            self.output_items.append(token)
+            return
+
+        # Default: Accumulate standard body block paragraph lines
+        self._text_buffer.append(stripped)
+
+    def _flush_buffer(self):
+        """Assembles text from the string buffer array into a single paragraph."""
+        if self._text_buffer:
+            combined_text = " ".join(self._text_buffer)
+            token = self._make_paragraph_token(combined_text, "body", {})
+            self.output_items.append(token)
+            self._text_buffer.clear()
+
+            # Reset numbered list counts when breaking clear of an active block
+            self._list_counters.clear()
