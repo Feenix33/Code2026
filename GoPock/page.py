@@ -207,9 +207,12 @@ class Page(ABC):
     
     def standardTitle(self, canvas, y):
         title = self.get_style("title")
+        if title is None or len(title) == 0:
+            return 0
         fmtStr = self.get_style("titleFormat")
         todayDate = self.get_style("date")
         fontTitle  = self.get_style("fontTitle")
+        # print(f"DEBUG: {self.debugID} standardTitle: title='{title}', fmtStr='{fmtStr}', todayDate='{todayDate}', fontTitle={fontTitle}")
         canvas.saveState() # we are going to change the font
         if fontTitle is not None:
             self.useCanvasFont(canvas, fontTitle)
@@ -217,6 +220,21 @@ class Page(ABC):
         canvas.restoreState()
         return y
     
+    def startLandscape(self, canvas):
+        canvas.saveState()
+        self.inLandscape = True
+        canvas.translate(self.mid.x, self.mid.y)
+        canvas.rotate(90)
+        canvas.translate(-self.mid.y, -self.mid.x)
+        self.mid = Point(self.mid.y, self.mid.x)
+        self.max = Point(self.max.y, self.max.x)
+
+    def stopLandscape(self, canvas):
+        canvas.restoreState()
+        self.mid = Point(self.mid.y, self.mid.x)
+        self.max = Point(self.max.y, self.max.x)
+
+
 @PageFactory.register("blank")
 class PageBlank(Page):
     def __init__(self, **kwargs):

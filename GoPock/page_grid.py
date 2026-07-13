@@ -47,7 +47,7 @@ class PageGrid(Page):
 
 
     def draw(self, canvas):
-        spacing = self.get_style("spacing") * inch
+        # spacing = self.get_style("spacing") * inch
         spacingX, spacingY = self._calculate_spacing()
         colorLine = self.get_style("colorLine")
 
