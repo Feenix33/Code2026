@@ -10,17 +10,26 @@ class PageTracker(Page):
 
     def draw(self, canvas):
         self.startLandscape(canvas)
-        colorLine = self.get_style("colorLine")
+        self.setLineSpec(canvas)
 
+        habitbox = self.get_style("habitbox")
+        if habitbox is None:
+            habitbox = False
+        else:
+            habitbox = bool(habitbox)
 
         y = self.max.y
         y -= 2.5 * self.standardTitle(canvas, self.max.y )#- (canvas._fontsize*1.5))
-        # wordFont = self.get_style("fontTitle")
-        # self.useCanvasFont(canvas, self.get_style("fontTitle"))
-        # titleFormat = self.get_style("titleFormat")
-        # pageDate = self.get_style("date")
-        # # print(f"Title: {self.title}, Format: {titleFormat}, Date: {pageDate}")
-        # self.printCanvasThreePart(canvas, self.max.y, formatStr=titleFormat, titleStr=self.title, date=pageDate)
+
+        # add the day of week
+        dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+        dx= canvas._fontsize # use this later for habit lines
+        x = self.max.x - dx* 12 #needs to match later
+
+        for j in range(7):
+            x += dx * 1.5
+            canvas.drawString(x, y, f"{dow[j]}")
+        y -= canvas._fontsize * 1.5
 
         habits = self.get_style("habits")
         if habits is not None:
@@ -34,11 +43,9 @@ class PageTracker(Page):
             habitcount = int(habitcount)
             if len(habits) < habitcount:
                 habits += [""] * (habitcount - len(habits))
-        print(f"DEBUG: {self.debugID} {len(habits)} habits: {habits}")
-        print(f"DEBUG: {self.debugID} habitcount: {habitcount}")
+        # print(f"DEBUG: {self.debugID} {len(habits)} habits: {habits}")
+        # print(f"DEBUG: {self.debugID} habitcount: {habitcount}")
 
-        canvas.setStrokeColor(colorLine)
-        dx= canvas._fontsize
         j = 0
         while y > 0 and j < habitcount:
             x = self.max.x - dx* 12
@@ -49,7 +56,8 @@ class PageTracker(Page):
 
             for i in range(7):
                 x += dx * 1.5
-                canvas.rect(x, y, dx, dx, stroke=1, fill=0)
+                if habitbox: canvas.rect(x, y, dx, dx, stroke=1, fill=0)
+                else: canvas.circle(x + dx/2, y + dx/2, dx/2, stroke=1, fill=0)
 
             y -= (canvas._fontsize*1.5)
             j += 1

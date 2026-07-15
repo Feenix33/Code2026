@@ -18,10 +18,11 @@ from utils import read_page_specs, build_book
 
 """
 Main TODO:
-- Tracker
+- monthly Tracker
 - Dice page
 
 - daily page
+- all pages should do a setLineSpec() as part of the base class
 
 
 Hints:
