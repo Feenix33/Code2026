@@ -57,6 +57,21 @@ class Page(ABC):
         pass
 
     def get_style(self, path):
+        # Style usage guide for input files:
+        # - Input values are written as simple key=value pairs, for example:
+        #   defaults font.size=8 font.color=blue
+        #   title drawFrame=True colorFrame=orange
+        # - get_style("font") returns the Font object from the page or book style.
+        # - Dotted overrides are supported for nested fields, such as:
+        #   font.size=12
+        #   font.color=blue
+        #   habit.count=2
+        #   habit.box=1
+        # - The lookup first checks an exact override for the given path, then
+        #   applies any dotted overrides for that path (for example, font.size
+        #   when resolving get_style("font")).
+        # - Brace-style object syntax such as font {size=12 color=blue} is not
+        #   supported by the current parser.
         if path in self.overrides:
             return self.overrides[path]
 
@@ -171,6 +186,15 @@ class Page(ABC):
     def useCanvasFont(self, canvas, font: Font):
         canvas.setFont(font.name, font.size)
         canvas.setFillColor(font.color)
+
+    def setStandardFont(self, canvas):
+        font = self.get_style("font")
+        if font is not None:
+            self.useCanvasFont(canvas, font)
+        else:
+            canvas.setFont("Helvetica", 10)
+            canvas.setFillColor(colors.black)
+            # TODO: Consider adding a default font to the book style for consistency across pages.
 
     def printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None, xmin=0, xmax=None):
         strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)

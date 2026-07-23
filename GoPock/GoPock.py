@@ -14,15 +14,22 @@ import page_checklist
 import page_weekly
 import page_title
 import page_tracker
+import page_montrack
 from utils import read_page_specs, build_book
 
 """
 Main TODO:
-- monthly Tracker
 - Dice page
-
 - daily page
+- spreadsheet or expense tracker
+- title page
+
 - all pages should do a setLineSpec() as part of the base class
+- tracker check if no arguments, should have default blank lines
+- weekly tracker should have day offset like monthly tracker
+- simplify the title font parameters
+- check that we use title font for title, then switch to standard font for the rest of the page
+- help guide
 
 
 Hints:
