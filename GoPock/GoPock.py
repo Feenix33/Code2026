@@ -3,6 +3,9 @@ GoPock.py
 Entry point for booklet creation.
 """
 import pprint
+import sys
+import argparse
+import os
 
 from booklet import Booklet
 from page import PageFactory
@@ -16,6 +19,9 @@ import page_title
 import page_tracker
 import page_montrack
 from utils import read_page_specs, build_book
+
+# Version constant
+VERSION = "1.0.0"
 
 """
 Main TODO:
@@ -81,14 +87,103 @@ Locales:
 """
 
 
-def main():
-    booklet = Booklet()
-    # pprint.pprint(booklet.config)
-    specs = read_page_specs("input.txt")
-    # print("----- After parsing -----")
-    # pprint.pprint(booklet.config)
-    # pprint.pprint(specs)
+def print_help():
+    """Print help message for GoPock."""
+    help_text = """GoPock - Pocket Booklet Creator
+Version: {}
 
+USAGE:
+    GoPock.py [INPUT_FILE] [OUTPUT_FILE]
+
+ARGUMENTS:
+    INPUT_FILE      Input specification file (default: input.txt)
+    OUTPUT_FILE     Output PDF filename (default: GoPock.pdf)
+                    If OUTPUT_FILE does not end with .pdf, it will be added.
+
+FLAGS:
+    -h, --help      Show this help message and exit
+    -v, --version   Show version information and exit
+
+DESCRIPTION:
+    GoPock creates customized pocket booklets from a specification file.
+    The input file uses key=value pairs to define pages and booklet settings.
+
+INPUT FILE FORMAT:
+    - Lines starting with # are comments and are ignored
+    - Page types: blank, text, title, grid, lines, checklist, tracker, montrack
+    - Booklet settings: addPages, margin, useRecipeAbbreviations, nameOut
+    - Page style defaults: font.name, font.size, font.color, colorLine, etc.
+
+EXAMPLES:
+    GoPock.py                           # Use input.txt, output to GoPock.pdf
+    GoPock.py recipes.txt               # Use recipes.txt, output to GoPock.pdf
+    GoPock.py input.txt output.pdf      # Use input.txt, output to output.pdf
+    GoPock.py --help                    # Show this help message
+    GoPock.py --version                 # Show version information
+
+For more information, see help.txt in the GoPock folder.
+""".format(VERSION)
+    print(help_text)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='GoPock',
+        add_help=False,  # We'll handle help manually
+        description='Create customized pocket booklets'
+    )
+    
+    parser.add_argument(
+        'input_file',
+        nargs='?',
+        default='input.txt',
+        help='Input specification file (default: input.txt)'
+    )
+    parser.add_argument(
+        'output_file',
+        nargs='?',
+        default='GoPock.pdf',
+        help='Output PDF filename (default: GoPock.pdf)'
+    )
+    parser.add_argument(
+        '-v', '--version',
+        action='store_true',
+        help='Show version information and exit'
+    )
+    parser.add_argument(
+        '-h', '--help',
+        action='store_true',
+        help='Show help message and exit'
+    )
+    
+    args = parser.parse_args()
+    
+    # Handle version flag
+    if args.version:
+        print(f"GoPock version {VERSION}")
+        sys.exit(0)
+    
+    # Handle help flag
+    if args.help:
+        print_help()
+        sys.exit(0)
+    
+    # Check if input file exists
+    if not os.path.isfile(args.input_file):
+        print(f"Error: Input file '{args.input_file}' not found.", file=sys.stderr)
+        sys.exit(1)
+    
+    # Ensure output file ends with .pdf
+    output_file = args.output_file
+    if not output_file.lower().endswith('.pdf'):
+        output_file += '.pdf'
+    
+    booklet = Booklet()
+    specs = read_page_specs(args.input_file)
+    
+    # Override the output filename from the config if command-line argument was provided
+    booklet.config.nameOut = output_file
+    
     build_book(booklet, specs, PageFactory)
     booklet.render()
 
