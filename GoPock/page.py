@@ -14,7 +14,7 @@ import sys
 #     size: int = 10
 #     color: str = "black"
 
-        # self.spacew = reportlab.pdfbase.pdfmetrics.stringWidth(' ', self.fontName, self.fontsize)/2 #half a space width
+# self.spacew = reportlab.pdfbase.pdfmetrics.stringWidth(' ', self.fontName, self.fontsize)/2 #half a space width
 
 
 class PageFactory:
@@ -50,7 +50,6 @@ class Page(ABC):
         Page.PageSequence += 1
         self.mid = Point(0, 0)
         self.max = Point(0, 0)
-
 
     @abstractmethod
     def draw(self, canvas):
@@ -134,8 +133,7 @@ class Page(ABC):
         self.renderStart(canvas, rotate, corner, sizewh)
         self.draw(canvas)
         self.renderEnd(canvas, rotate, corner, sizewh)
-        
-        
+
     def buildParagraphStyle(
         self,
         name='CurrentStyle',
@@ -153,6 +151,7 @@ class Page(ABC):
         leading=None,
     ):
         # print(f"DEBUG: Paragraph style {name} created with fontsize={fontSize}, textColor={textColor}")
+        if fontSize == 0: fontSize = 10
         if leading is None:
             leading = int(fontSize * 1.2)
         if spaceAfter is None:
@@ -196,7 +195,7 @@ class Page(ABC):
             canvas.setFillColor(colors.black)
             # TODO: Consider adding a default font to the book style for consistency across pages.
 
-    def printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None, xmin=0, xmax=None):
+    def printCanvasThreePart(self, canvas, y, formatStr="%s", titleStr=None, date=None, xmin=0, xmax=None):
         strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)
         min_x = xmin+10
         if xmax is None:
@@ -213,7 +212,7 @@ class Page(ABC):
             canvas.drawRightString(max_x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
         return canvas._fontsize * 1.2
-    
+
     def setLineSpec(self, canvas, linespec=None):
         if linespec is None:
             linespec = self.get_style("line")
@@ -228,7 +227,7 @@ class Page(ABC):
         else:
             canvas.setDash([], 0)
         canvas.setStrokeColor(linespec.color)
-    
+
     def standardTitle(self, canvas, y):
         title = self.get_style("title")
         if title is None or len(title) == 0:
@@ -243,7 +242,7 @@ class Page(ABC):
         y = self.printCanvasThreePart(canvas, y, fmtStr, title, todayDate)
         canvas.restoreState()
         return y
-    
+
     def startLandscape(self, canvas):
         canvas.saveState()
         self.inLandscape = True
@@ -257,6 +256,10 @@ class Page(ABC):
         canvas.restoreState()
         self.mid = Point(self.mid.y, self.mid.x)
         self.max = Point(self.max.y, self.max.x)
+
+    # helper function for line spacing
+    def next_line(self, canvas, lines=1):
+        return canvas._leading * 1.25 * lines
 
 
 @PageFactory.register("blank")

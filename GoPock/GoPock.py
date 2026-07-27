@@ -15,6 +15,7 @@ import page_lines
 import page_grid
 import page_checklist
 import page_weekly
+import page_daily
 import page_title
 import page_tracker
 import page_montrack
@@ -28,7 +29,6 @@ Main TODO:
 - Dice page
 - daily page
 - spreadsheet or expense tracker
-- title page
 
 - all pages should do a setLineSpec() as part of the base class
 - tracker check if no arguments, should have default blank lines

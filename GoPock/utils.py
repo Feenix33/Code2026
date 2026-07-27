@@ -154,7 +154,7 @@ def build_book(book, specs, page_factory):
             if left_page is None:
                 print(f"WARNING line {spec.line_number}: failed to create WeeklyLeft page")
             else:
-                left_page.overrides = spec.attrs
+                left_page.overrides = {**left_page.overrides, **spec.attrs}
                 book.add_page(left_page)
             
             # Create right page
@@ -162,7 +162,7 @@ def build_book(book, specs, page_factory):
             if right_page is None:
                 print(f"WARNING line {spec.line_number}: failed to create WeeklyRight page")
             else:
-                right_page.overrides = spec.attrs
+                right_page.overrides = {**right_page.overrides, **spec.attrs}
                 book.add_page(right_page)
             continue
 
@@ -172,7 +172,7 @@ def build_book(book, specs, page_factory):
             print(f"WARNING line {spec.line_number}: unknown page type '{spec.page_type}'")
             continue
 
-        page.overrides = spec.attrs
+        page.overrides = {**page.overrides, **spec.attrs}
         book.add_page(page)
 
 def parse_date_value(val):
