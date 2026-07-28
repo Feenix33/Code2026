@@ -93,7 +93,10 @@ class DailyPage(Page):
         if self.flip:
             titleFormat = self.flip_title_format(titleFormat)
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
-        self.printCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr="My Daily Page", date=self.date)
+        # self.printCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr="My Daily Page", date=self.date)
+        self.drawCanvasThreePart(
+            canvas, y, formatStr=titleFormat, titleStr="My Daily Page", date=self.date
+        )
         return canvas._leading
 
     def draw(self, canvas):
@@ -107,18 +110,17 @@ class DailyPage(Page):
             format=self.timeFormat,
         )
 
-        y = self.max.y
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
-        # if self.title and len(self.title) > 0:
-        y -= self._draw_header(canvas, y)
-        y -= self.next_line(canvas)
+        y = self.max.y - self.next_line(canvas)
+        self._draw_header(canvas, y)
 
         myfont = self.get_style("font")
         self.useCanvasFont(canvas, myfont)
         linespec = self.get_style("linespec")
         self.setLineSpec(canvas, linespec)
+        y -= self.next_line(canvas, 2) # add a space
 
-        y -= self.next_line(canvas)
+        # y -= self.next_line(canvas)
         j = 0
         while y > 10 and j < len(times):
             if self.flip:

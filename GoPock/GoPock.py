@@ -20,6 +20,7 @@ import page_daily
 import page_title
 import page_tracker
 import page_montrack
+import page_dice
 from utils import read_page_specs, build_book
 
 # Version constant
@@ -38,8 +39,8 @@ DEFAULT_BOOKLET_SPECS = [
 """
 Main TODO:
 - Dice page
-- If no input.txt, then default booklet
 
+- CanvasThreePart in page.py should not change the y value--all pages should use the next_line() routine too
 - all pages should do a setLineSpec() as part of the base class
 - tracker check if no arguments, should have default blank lines
 - weekly tracker should have day offset like monthly tracker
@@ -49,6 +50,11 @@ Main TODO:
 
 
 Hints:
+================================================================================================
+x = get_value()
+x = 5 if x is None or x == 0 else abs(x)
+OR
+x = get_value() or 5
 ================================================================================================
 Reportlab units are in points (1/72 inch)
 from reportlab.lib.units import inch

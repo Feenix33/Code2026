@@ -213,6 +213,20 @@ class Page(ABC):
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
         return canvas._leading
 
+    def drawCanvasThreePart(self, canvas, y, formatStr="%s", titleStr=None, date=None, xmin=0, xmax=None):
+        strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)
+        min_x = xmin + 10
+        if xmax is None:
+            max_x = self.max.x
+            mid_x = self.mid.x
+        else:
+            max_x = xmax
+            mid_x = xmin + ((max_x - xmin) / 2)
+        if strLeft != "": canvas.drawString(min_x, y, strLeft)
+        if strCenter != "": canvas.drawCentredString(mid_x, y, strCenter)
+        if strRight != "": canvas.drawRightString(max_x - 10, y, strRight)
+        return canvas._leading
+
     def setLineSpec(self, canvas, linespec=None):
         if linespec is None:
             linespec = self.get_style("line")

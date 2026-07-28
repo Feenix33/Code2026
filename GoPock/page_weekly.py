@@ -2,8 +2,7 @@ from page import Page, PageFactory
 from datetime import datetime, date, timedelta
 
 # Debug only:
-from reportlab.lib import colors
-
+# from reportlab.lib import colors
 
 def get_current_week_monday(target_date=None):
     """Get the Monday of the week containing target_date.
@@ -140,4 +139,3 @@ class PageWeeklyRight(WeeklyPage):
         """Draw the right weekly page."""
         # self._draw_header(canvas)
         self._draw_weekly(canvas)
-        # TODO: Implement detailed draw routine for Thursday-Sunday
