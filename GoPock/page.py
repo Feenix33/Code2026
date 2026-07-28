@@ -211,7 +211,7 @@ class Page(ABC):
         if strRight != '':
             canvas.drawRightString(max_x - 10, y - (canvas._fontsize*1.5), strRight)
         # canvas.line(0, y - (canvas._fontsize*1.5) - 5, Page.max.x, y - (canvas._fontsize*1.5) - 5)
-        return canvas._fontsize * 1.2
+        return canvas._leading
 
     def setLineSpec(self, canvas, linespec=None):
         if linespec is None:
@@ -260,6 +260,21 @@ class Page(ABC):
     # helper function for line spacing
     def next_line(self, canvas, lines=1):
         return canvas._leading * 1.25 * lines
+
+    def flip_title_format(self, fmt: str) -> str:
+        if not fmt:
+            return fmt
+
+        normalized = fmt.replace('\\t', '\t')
+        parts = normalized.split('\t')
+
+        if len(parts) <= 1:
+            return fmt
+
+        if len(parts) == 2:
+            return f"{parts[1]}\t{parts[0]}"
+
+        return f"{parts[-1]}\t{parts[1]}\t{parts[0]}"
 
 
 @PageFactory.register("blank")

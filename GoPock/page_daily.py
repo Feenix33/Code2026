@@ -39,9 +39,14 @@ class DailyPage(Page):
         self.endTime = endTime
         self.increment = timeIncrement
         self.timeLine = bool(timeLine)
+        self.flip = kwargs.get("flip", False)
+        self.flip = bool(self.flip)
 
         if "titleFormat" not in self.overrides:
             self.overrides["titleFormat"] = self.titleFormat
+
+        if self.flip:
+            self.titleFormat = self.flip_title_format(self.titleFormat)
 
     def get_style(self, path):
         style = super().get_style(path)
@@ -85,11 +90,15 @@ class DailyPage(Page):
         titleFormat = self.get_style("titleFormat")
         if titleFormat is None:
             titleFormat = "%b%d\t\t%a"
+        if self.flip:
+            titleFormat = self.flip_title_format(titleFormat)
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
         self.printCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr="My Daily Page", date=self.date)
         return canvas._leading
 
     def draw(self, canvas):
+        self.flip = self.get_style("flip") or False
+        self.flip = bool(self.flip)
 
         times = self._generate_time_list(
             start=self.startTime,
@@ -112,10 +121,13 @@ class DailyPage(Page):
         y -= self.next_line(canvas)
         j = 0
         while y > 10 and j < len(times):
-            canvas.drawString(10, y, f"{times[j]}")
+            if self.flip:
+                canvas.drawRightString(self.max.x-10, y, f"{times[j]}")
+            else:
+                canvas.drawString(10, y, f"{times[j]}")
             if self.timeLine and j%2 == 1:
                 y -= 2
-                canvas.line(10, y, self.max.x, y)
+                canvas.line(10, y, self.max.x-10, y)
                 # y -= 2
             y -= self.next_line(canvas)
             j += 1

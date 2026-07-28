@@ -20,6 +20,7 @@ class PageTitle(Page):
         line1 = self.get_style("line1")
         line2 = self.get_style("line2")
         line3 = self.get_style("line3")
+        
 
         ystart = self.max.y*0.70
         yend = self.max.y*0.30
@@ -29,12 +30,11 @@ class PageTitle(Page):
 
         ypt -= (titlefont.size * 1.2) * 2
         self.useCanvasFont(canvas, self.get_style("font"))
-        canvas.drawCentredString(self.mid.x, ypt, line1)
-        ypt -= bodyfont.size * 1.2
-        canvas.drawCentredString(self.mid.x, ypt, line2)
-        self.useCanvasFont(canvas, lastfont)
-        canvas.drawCentredString(self.mid.x, yend, line3)
-        ypt -= lastfont.size * 1.2
+        lines = [line1, line2, line3]
+        for line in lines:
+            if line is not None:
+                canvas.drawCenteredString(self.mid.x, ypt, line)
+            ypt -= self.next_line(canvas)
 
         #draw bounding box
         xbgn = 0.25 * inch

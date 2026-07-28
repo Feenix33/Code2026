@@ -9,6 +9,7 @@ import os
 
 from booklet import Booklet
 from page import PageFactory
+from data_classes import PageSpec
 import page_word
 import page_text
 import page_lines
@@ -24,11 +25,20 @@ from utils import read_page_specs, build_book
 # Version constant
 VERSION = "1.0.0"
 
+DEFAULT_BOOKLET_SPECS = [
+    PageSpec(page_type="blank", attrs={}, line_number=0),
+    PageSpec(page_type="title", attrs={"title": "Pocket Planner"}, line_number=0),
+    PageSpec(page_type="weekly", attrs={}, line_number=0),
+    PageSpec(page_type="checklist", attrs={"title": "To Do"}, line_number=0),
+    PageSpec(page_type="checklist", attrs={"title": "Shopping List"}, line_number=0),
+    PageSpec(page_type="lines", attrs={}, line_number=0),
+    PageSpec(page_type="lines", attrs={}, line_number=0),
+]
+
 """
 Main TODO:
 - Dice page
-- daily page
-- spreadsheet or expense tracker
+- If no input.txt, then default booklet
 
 - all pages should do a setLineSpec() as part of the base class
 - tracker check if no arguments, should have default blank lines
@@ -108,6 +118,9 @@ DESCRIPTION:
     GoPock creates customized pocket booklets from a specification file.
     The input file uses key=value pairs to define pages and booklet settings.
 
+    If the default input file (input.txt) is not found, GoPock will use a built-in
+    default booklet configuration and print a warning.
+
 INPUT FILE FORMAT:
     - Lines starting with # are comments and are ignored
     - Page types: blank, text, title, grid, lines, checklist, tracker, montrack
@@ -168,18 +181,27 @@ def main():
         print_help()
         sys.exit(0)
     
-    # Check if input file exists
-    if not os.path.isfile(args.input_file):
-        print(f"Error: Input file '{args.input_file}' not found.", file=sys.stderr)
-        sys.exit(1)
-    
+    # Determine booklet page specs based on input file presence
+    input_file = args.input_file
+    if os.path.isfile(input_file):
+        specs = read_page_specs(input_file)
+    else:
+        if input_file == 'input.txt':
+            print(
+                f"Warning: Input file '{input_file}' not found. Using built-in default booklet configuration.",
+                file=sys.stderr,
+            )
+            specs = DEFAULT_BOOKLET_SPECS
+        else:
+            print(f"Error: Input file '{input_file}' not found.", file=sys.stderr)
+            sys.exit(1)
+
     # Ensure output file ends with .pdf
     output_file = args.output_file
     if not output_file.lower().endswith('.pdf'):
         output_file += '.pdf'
     
     booklet = Booklet()
-    specs = read_page_specs(args.input_file)
     
     # Override the output filename from the config if command-line argument was provided
     booklet.config.nameOut = output_file
