@@ -41,7 +41,6 @@ DEFAULT_BOOKLET_SPECS = [
 """
 Main TODO:
 - Image page
-- Month
 
 x Debug frames or add manually (might be there already)
 - Convert CanvasThreePart in page.py to the new drawCanvas...

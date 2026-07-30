@@ -1,6 +1,7 @@
 from page import Page, PageFactory
 from datetime import datetime, date as dt_date
 from utils import parse_date_value
+from reportlab.pdfbase.pdfmetrics import stringWidth
 import calendar
 
 def month_calendar_list(d: dt_date, start_of_week: int = 0) -> list:
@@ -36,29 +37,61 @@ class PageMonth(Page):
         self.titleFormat = titleFormat
 
     def draw(self, canvas):
-        wordFont = self.get_style("fontTitle")
+        self.setLineSpec(canvas)
+
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
         pageDate = parse_date_value(self.get_style("date") or dt_date.today())
+
+        thisMonth = calendar.month(pageDate.year, pageDate.month).splitlines()
+        gridMonth = calendar.monthcalendar(pageDate.year, pageDate.month)
 
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
         y = self.max.y - (self.next_line(canvas) * 1.5)
 
-        # titleFormat = self.get_style("titleFormat") or
-        titleFormat = self.titleFormat
-        self.drawCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr=self.title, date=pageDate)
+        if self.title is not None:
+            title = self.title
+            titleFormat = self.titleFormat
+        else:
+            title = thisMonth[0].strip()
+            titleFormat = "\t%s"
+
+        self.drawCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr=title, date=pageDate)
         y -= self.next_line(canvas)
 
+        # switch to normal font
         myfont = self.get_style("font")
         self.useCanvasFont(canvas, myfont)
 
         # get the drawing dimensions
-        weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         dx = int((self.max.x - 20)/7) # 20 is 2* hardcoded margin
         xpos = 10 + dx/2
-        for day in weekdays:
-            canvas.drawCentredString(xpos, y, day)
+
+        ybgn = y + myfont.size * 0.2
+        yend = 10
+        ylen = ybgn - yend
+        dy = (ylen - canvas._leading*1.5) / len(gridMonth) # sub off the lines for days of week; grid month has number of weeks
+        yoff = canvas._leading *1.0
+        canvas.line(10, ybgn, 10, yend)
+        canvas.line(10+dx, ybgn, 10+dx, yend)
+
+        # do days of week
+        for dow in thisMonth[1].split(" "):
+            canvas.drawCentredString(xpos, y, dow)
             xpos += dx
 
-        # print (f"Month:{month_calendar_list(d=pageDate)}")
-        # print (f"today:{pageDate}")
-        # print (f"titleFormat:{titleFormat}")
+        y -= self.next_line(canvas, 1.5)
+
+        # do the days # !! Switch to grid cal
+        for week in gridMonth:
+            xpos = 10 + (stringWidth("M", myfont.name, myfont.size)/2) # add a little buffer
+
+            for dow in week:
+                if dow != 0:
+                    canvas.drawString(xpos, y, f"{dow}")
+                xpos += dx
+            canvas.line(10, y+yoff, self.max.x-10, y+yoff)
+            y -= dy
+        canvas.line(10, yend, self.max.x - 10, yend)
+        for j in range(7):
+            canvas.line(10 + j * dx, ybgn, 10 + j * dx, yend)
+        canvas.line(self.max.x-10, ybgn, self.max.x-10, yend)
