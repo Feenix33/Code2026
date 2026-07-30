@@ -21,6 +21,8 @@ import page_title
 import page_tracker
 import page_montrack
 import page_dice
+import page_month
+import page_monthref
 from utils import read_page_specs, build_book
 
 # Version constant
@@ -38,15 +40,20 @@ DEFAULT_BOOKLET_SPECS = [
 
 """
 Main TODO:
-- Dice page
+- Image page
+- Month
 
-- CanvasThreePart in page.py should not change the y value--all pages should use the next_line() routine too
+x Debug frames or add manually (might be there already)
+- Convert CanvasThreePart in page.py to the new drawCanvas...
+- Consistent use of next_line()
 - all pages should do a setLineSpec() as part of the base class
 - tracker check if no arguments, should have default blank lines
 - weekly tracker should have day offset like monthly tracker
 - simplify the title font parameters
 - check that we use title font for title, then switch to standard font for the rest of the page
-- help guide
+- help guide updates
+- Determine what line_number is in the PageSpec
+- Month and MonthRef take a date that is month name or number only and translate
 
 
 Hints:
@@ -59,6 +66,11 @@ x = get_value() or 5
 Reportlab units are in points (1/72 inch)
 from reportlab.lib.units import inch
 x_coordinate = 1.5 * inch 
+================================================================================================
+# Get the width in points (1 point = 1/72 inch)
+from reportlab.pdfbase.pdfmetrics import stringWidth
+
+width = stringWidth(text, font_name, font_size)
 ================================================================================================
 Print current function name
 import sys
