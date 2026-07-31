@@ -23,6 +23,7 @@ import page_montrack
 import page_dice
 import page_month
 import page_monthref
+import page_image
 from utils import read_page_specs, build_book
 
 # Version constant
