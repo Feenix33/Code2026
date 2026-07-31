@@ -1,6 +1,7 @@
 from page import Page, PageFactory
 from datetime import datetime, date as dt_date
-from utils import parse_date_value
+# from utils import parse_date_value
+from utils import parse_flexible_date
 from reportlab.pdfbase.pdfmetrics import stringWidth
 import calendar
 
@@ -39,8 +40,8 @@ class PageMonthRef(Page):
 
     def draw(self, canvas):
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
-        pageDate = parse_date_value(self.get_style("date")) or dt_date.today()
-
+        # pageDate = parse_date_value(self.get_style("date")) or dt_date.today()
+        pageDate = parse_flexible_date(self.get_style("date")) or dt_date.today()
         # how many months to print
         countMonth = self.get_style("count") or 2
         countMonth = int(countMonth)

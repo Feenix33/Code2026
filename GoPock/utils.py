@@ -319,6 +319,115 @@ def buildThreePart(formatStr="\t%d%b%y\t", titleStr=None, date=None):
     return left, center, right
 
 
+from datetime import date
+import re
+
+
+def parse_flexible_date(date_str: str) -> date | None:
+    """
+    Input a string and return a date
+    Used for the month pages
+    Input can be yyyy-mm-dd
+    mm/dd/yyyy
+    mm/dd
+    m
+    month name
+    and separators can be . / -
+
+    return None if there is an error
+    """
+    if not date_str or not isinstance(date_str, str):
+        return None
+
+    cleaned = date_str.strip().lower()
+    current_year = date.today().year
+
+    # Normalize separators (- or / or .) to dashes
+    normalized = re.sub(r"[/.]", "-", cleaned)
+
+    # 1. Try full month name or abbreviation (e.g., "January" or "Jan")
+    try:
+        # Check if it's purely a month name
+        dt = date.today()
+        # Parse month name using dummy year/day then adjust
+        # We can use strptime with a full month parse trick or standard table
+        parsed = date(1, 1, 1)
+        # Try matching month names
+        months = {
+            "january": 1,
+            "jan": 1,
+            "february": 2,
+            "feb": 2,
+            "march": 3,
+            "mar": 3,
+            "april": 4,
+            "apr": 4,
+            "may": 5,
+            "june": 6,
+            "jun": 6,
+            "july": 7,
+            "jul": 7,
+            "august": 8,
+            "aug": 8,
+            "september": 9,
+            "sep": 9,
+            "sept": 9,
+            "october": 10,
+            "oct": 10,
+            "november": 11,
+            "nov": 11,
+            "december": 12,
+            "dec": 12,
+        }
+        if normalized in months:
+            return date(current_year, months[normalized], 1)
+    except Exception:
+        pass
+
+    # 2. Split by separator '-'
+    parts = normalized.split("-")
+
+    try:
+        if len(parts) == 1:
+            # Single numeric input like "5" or "12" (treated as month)
+            if parts[0].isdigit():
+                m = int(parts[0])
+                if 1 <= m <= 12:
+                    return date(current_year, m, 1)
+            return None
+
+        elif len(parts) == 2:
+            # m/d or yyyy-mm or mm/dd format
+            p1, p2 = int(parts[0]), int(parts[1])
+            # Check if first part is a 4-digit year (yyyy-mm)
+            if len(parts[0]) == 4:
+                year, month = p1, p2
+                day = 1
+            else:
+                # mm/dd
+                year = current_year
+                month, day = p1, p2
+            return date(year, month, day)
+
+        elif len(parts) == 3:
+            # yyyy-mm-dd or mm/dd/yyy
+            p1, p2, p3 = int(parts[0]), int(parts[1]), int(parts[2])
+            if len(parts[0]) == 4:
+                # yyyy-mm-dd
+                year, month, day = p1, p2, p3
+            else:
+                # mm/dd/yy or mm/dd/yyyy
+                month, day, year = p1, p2, p3
+                if year < 100:
+                    year += 2000  # Adjust 2-digit year if needed
+            return date(year, month, day)
+
+    except (ValueError, OverflowError):
+        return None
+
+    return None
+
+
 if __name__ == '__main__':
    
     print ("TESTING buildThreePart")   
