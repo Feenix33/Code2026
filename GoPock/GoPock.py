@@ -42,14 +42,14 @@ DEFAULT_BOOKLET_SPECS = [
 """
 Main TODO:
 x Debug frames or add manually (might be there already)
-- Convert CanvasThreePart in page.py to the new drawCanvas...
+x Convert CanvasThreePart in page.py to the new drawCanvas...
 - Consistent use of next_line()
-- all pages should do a setLineSpec() as part of the base class
-- tracker check if no arguments, should have default blank lines
+x all pages should do a setLineSpec() as part of the base class
+x tracker check if no arguments, should have default blank lines
 - weekly tracker should have day offset like monthly tracker
 - weekday offset should be same as month & monthref
 - simplify the title font parameters
-- check that we use title font for title, then switch to standard font for the rest of the page
+x check that we use title font for title, then switch to standard font for the rest of the page
 x help guide updates
 - Determine what line_number is in the PageSpec
 - Month and MonthRef take a date that is month name or number only and translate

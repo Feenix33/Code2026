@@ -54,8 +54,7 @@ class WeeklyPage(Page):
     def _draw_header(self, canvas, y):
         titleFormat = self.get_style("titleFormat")
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
-        # printCanvasThreePart(self, canvas, y, formatStr=None, titleStr=None, date=None):
-        self.printCanvasThreePart(
+        self.drawCanvasThreePart(
             canvas,
             y,
             formatStr=titleFormat, # self.dateFormat,
@@ -68,6 +67,7 @@ class WeeklyPage(Page):
     def _draw_weekly(self, canvas):
         y = self.max.y
         self.useCanvasFont(canvas, self.get_style("fontTitle"))
+        y -= self.next_line(canvas)
         if self.title and len(self.title) > 0:
             y -= self._draw_header(canvas, y)
 
@@ -79,30 +79,33 @@ class WeeklyPage(Page):
         ypts = [y, 2*y/3, y/3,  0]
         for ypt in ypts:
             canvas.line(0, ypt, self.max.x, ypt)
+
+        for n in range(len(ypts)):
+            ypts[n] -= self.next_line(canvas)
         canvas.line(self.max.x, y, self.max.x, 0)
         canvas.line(0, y, 0, 0)
         if len(self.days) > 3:
-            canvas.line(self.mid.x, ypts[2], self.mid.x, 0)
-        self.printCanvasThreePart(canvas, ypts[0],
+            canvas.line(self.mid.x, ypts[2]+canvas._leading, self.mid.x, 0)
+        self.drawCanvasThreePart(canvas, ypts[0],
                                     formatStr=self.dateFormat,
                                     titleStr=None,
                                     date=self.days[0] )
-        self.printCanvasThreePart(canvas, ypts[1],
+        self.drawCanvasThreePart(canvas, ypts[1],
                                     formatStr=self.dateFormat,
                                     titleStr=None,
                                     date=self.days[1] )
         if len(self.days) == 3:
-            self.printCanvasThreePart(canvas, ypts[2],
+            self.drawCanvasThreePart(canvas, ypts[2],
                                         formatStr=self.dateFormat,
                                         titleStr=None,
                                         date=self.days[2] )
         else:
-            self.printCanvasThreePart(canvas, ypts[2],
+            self.drawCanvasThreePart(canvas, ypts[2],
                                         formatStr=self.dateFormat,
                                         titleStr=None,
                                         date=self.days[2], 
                                         xmin=0, xmax=self.mid.x)
-            self.printCanvasThreePart(canvas, ypts[2],
+            self.drawCanvasThreePart(canvas, ypts[2],
                                         formatStr=self.dateFormat,
                                         titleStr=None,
                                         date=self.days[3],

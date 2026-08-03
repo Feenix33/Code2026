@@ -3,10 +3,10 @@ from reportlab.lib.units import inch
 
 @PageFactory.register("tracker")
 class PageTracker(Page):
-    def __init__(self, title="Habit Tracker", spacing=0.25, **kwargs):
+    def __init__(self, title="Habit Tracker", **kwargs):
         super().__init__()
         self.title = title
-        self.spacing = spacing
+        self.default_habitcount = 5
 
     def draw(self, canvas):
         self.startLandscape(canvas)
@@ -18,8 +18,12 @@ class PageTracker(Page):
         else:
             habitbox = bool(habitbox)
 
-        y = self.max.y
-        y -= 2.5 * self.standardTitle(canvas, self.max.y )#- (canvas._fontsize*1.5))
+        self.useTitleFont(canvas)
+        y = self.max.y - self.next_line(canvas, 1)
+        self.standardTitle(canvas, y )#- (canvas._fontsize*1.5))
+        y -= self.next_line(canvas)
+
+        self.setStandardFont(canvas)
 
         # add the day of week
         dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -32,17 +36,19 @@ class PageTracker(Page):
         y -= canvas._fontsize * 1.5
 
         habits = self.get_style("habits")
+        habitcount = self.get_style("habitCount")
         if habits is not None:
             habits = habits.split("|")
         else:
             habits = []
-        habitcount = self.get_style("habitCount")
         if habitcount is None:
             habitcount = len(habits)
         else:
             habitcount = int(habitcount)
-            if len(habits) < habitcount:
-                habits += [""] * (habitcount - len(habits))
+        if habitcount == 0:
+            habitcount = self.default_habitcount
+        if len(habits) < habitcount:
+            habits += [""] * (habitcount - len(habits))
         # print(f"DEBUG: {self.debugID} {len(habits)} habits: {habits}")
         # print(f"DEBUG: {self.debugID} habitcount: {habitcount}")
 
@@ -59,7 +65,7 @@ class PageTracker(Page):
                 if habitbox: canvas.rect(x, y, dx, dx, stroke=1, fill=0)
                 else: canvas.circle(x + dx/2, y + dx/2, dx/2, stroke=1, fill=0)
 
-            y -= (canvas._fontsize*1.5)
+            y -= self.next_line(canvas)
             j += 1
 
         self.stopLandscape(canvas)

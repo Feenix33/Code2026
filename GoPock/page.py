@@ -195,7 +195,7 @@ class Page(ABC):
             canvas.setFillColor(colors.black)
             # TODO: Consider adding a default font to the book style for consistency across pages.
 
-    def printCanvasThreePart(self, canvas, y, formatStr="%s", titleStr=None, date=None, xmin=0, xmax=None):
+    def DELETEprintCanvasThreePart(self, canvas, y, formatStr="%s", titleStr=None, date=None, xmin=0, xmax=None):
         strLeft, strCenter, strRight = buildThreePart(formatStr, titleStr, date)
         min_x = xmin+10
         if xmax is None:
@@ -242,20 +242,31 @@ class Page(ABC):
             canvas.setDash([], 0)
         canvas.setStrokeColor(linespec.color)
 
+    def useTitleFont(self, canvas, spec=None):
+        """
+        Set the font for the title
+        """
+        if spec is None:
+            spec = self.get_style("fontTitle")
+        if spec is not None:
+            self.useCanvasFont(canvas, spec)
+
     def standardTitle(self, canvas, y):
         title = self.get_style("title")
         if title is None or len(title) == 0:
             return 0
         fmtStr = self.get_style("titleFormat")
         todayDate = self.get_style("date")
-        fontTitle  = self.get_style("fontTitle")
+        # fontTitle  = self.get_style("fontTitle")
         # print(f"DEBUG: {self.debugID} standardTitle: title='{title}', fmtStr='{fmtStr}', todayDate='{todayDate}', fontTitle={fontTitle}")
-        canvas.saveState() # we are going to change the font
-        if fontTitle is not None:
-            self.useCanvasFont(canvas, fontTitle)
-        y = self.printCanvasThreePart(canvas, y, fmtStr, title, todayDate)
-        canvas.restoreState()
-        return y
+        # canvas.saveState() # we are going to change the font
+        # if fontTitle is not None:
+        #     self.useCanvasFont(canvas, fontTitle)
+        # y = self.max.y - self.next_line(canvas)
+        self.drawCanvasThreePart(canvas, y, fmtStr, title, todayDate)
+        # y -= self.next_line(canvas)
+        # canvas.restoreState()
+        return canvas._leading
 
     def startLandscape(self, canvas):
         canvas.saveState()

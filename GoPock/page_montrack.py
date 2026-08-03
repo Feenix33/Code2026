@@ -12,28 +12,22 @@ class PageMonTrack(Page):
 
 
     def draw(self, canvas):
-
-        #helper function for line spacing
-        def space_down(lines=1): 
-            nonlocal y
-            y -= canvas._leading * 1.5 * lines
-
-
         self.setLineSpec(canvas)
-        canvas.rect(0, 0, self.max.x, self.max.y, stroke=1, fill=0) # temp for debugging
+        # canvas.rect(0, 0, self.max.x, self.max.y, stroke=1, fill=0) # temp for debugging
 
         habitbox = self.get_style("habit.box")
         habitbox = bool(habitbox) if habitbox is not None else False
 
-        y = self.max.y
-        y -= 1.0 * self.standardTitle(canvas, self.max.y )
+        self.useTitleFont(canvas)
+        y = self.max.y - self.next_line(canvas)
+        self.standardTitle(canvas, y)
+        y -= self.next_line(canvas)
 
         #switch to standard font
         self.setStandardFont(canvas)
 
-        #add a blank line sepa
-        y -= canvas._fontsize * 1.5
-        space_down()
+        #add a blank line separater
+        y -= self.next_line(canvas)
 
         # prep habit titles
         habits = self.get_style("habit.list")
@@ -50,7 +44,6 @@ class PageMonTrack(Page):
             habitcount = int(habitcount)
         if len(habits) < habitcount:
             habits += [""] * (habitcount - len(habits))
-
 
         # loop through the habits
         # habit
@@ -75,14 +68,14 @@ class PageMonTrack(Page):
                 canvas.line(10, y, self.mid.x, y)
 
             x = dxstart
-            space_down()
+            y -= self.next_line(canvas)
             # day of week indicators
             for i in range(7):
                 canvas.drawString(x, y, f"{dow[(i+day_offset)%7]}")
                 x += (1.5*dx)
             
             for w in range (5):
-                space_down()
+                y -= self.next_line(canvas)
                 x = dxstart
                 for i in range(7):
                     if habitbox: canvas.rect(x, y, dx, dx, stroke=1, fill=0)
@@ -90,7 +83,5 @@ class PageMonTrack(Page):
                     x += (1.5*dx)
 
             # next habit
-            space_down(lines=2)
+            y -= self.next_line(canvas, 2)
             j += 1
-
-        # self.stopLandscape(canvas)

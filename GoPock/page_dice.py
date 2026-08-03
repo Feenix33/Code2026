@@ -83,7 +83,7 @@ class PageDice(Page):
         title = self.title
         if title is None or len(title) == 0:
             title = dice_string
-        self.printCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr=title, date=pageDate)
+        self.drawCanvasThreePart(canvas, y, formatStr=titleFormat, titleStr=title, date=pageDate)
         y -= self.next_line(canvas,2)
 
         myfont = self.get_style("font")
