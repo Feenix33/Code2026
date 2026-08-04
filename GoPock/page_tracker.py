@@ -26,13 +26,15 @@ class PageTracker(Page):
         self.setStandardFont(canvas)
 
         # add the day of week
-        dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+        dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+        day_offset = self.get_style("offset")
+        day_offset = int(day_offset) if day_offset is not None else 0
         dx= canvas._fontsize # use this later for habit lines
         x = self.max.x - dx* 12 #needs to match later
 
         for j in range(7):
             x += dx * 1.5
-            canvas.drawString(x, y, f"{dow[j]}")
+            canvas.drawString(x, y, f"{dow[(j+day_offset)%7]}")
         y -= canvas._fontsize * 1.5
 
         habits = self.get_style("habits")

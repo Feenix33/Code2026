@@ -55,7 +55,7 @@ class PageMonTrack(Page):
 
         # day of week and compute coords
         dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-        day_offset = self.get_style("habit.offset")
+        day_offset = self.get_style("offset")
         day_offset = int(day_offset) if day_offset is not None else 0
 
         # main loop

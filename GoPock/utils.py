@@ -175,6 +175,10 @@ def build_book(book, specs, page_factory):
         page.overrides = {**page.overrides, **spec.attrs}
         book.add_page(page)
 
+def _today_date():
+    return datetime.date.today()
+
+
 def parse_date_value(val):
     """Parse a date-like value into a datetime.date.
 
@@ -185,10 +189,52 @@ def parse_date_value(val):
         return val
     if isinstance(val, datetime.datetime):
         return val.date()
+
+    if isinstance(val, int) and not isinstance(val, bool):
+        today = _today_date()
+        if val == 0:
+            return datetime.date(today.year, today.month, 1)
+        if 1 <= val <= 12:
+            return datetime.date(today.year, val, 1)
+        raise ValueError(f"Month value out of range: {val}")
+
     if isinstance(val, str):
         s = val.strip()
         # Normalize common trailing punctuation
         s = s.strip().rstrip('.,')
+
+        if re.fullmatch(r'\d{1,2}', s):
+            month = int(s)
+            today = _today_date()
+            if month == 0:
+                return datetime.date(today.year, today.month, 1)
+            if 1 <= month <= 12:
+                return datetime.date(today.year, month, 1)
+            raise ValueError(f"Month value out of range: {val}")
+
+        if re.fullmatch(r'\+\d{1,2}', s):
+            offset = int(s[1:])
+            today = _today_date()
+            base_index = today.year * 12 + (today.month - 1) + offset
+            target_year, month_index = divmod(base_index, 12)
+            return datetime.date(target_year, month_index + 1, 1)
+
+        if re.fullmatch(r'\-\d{1,2}', s):
+            offset = int(s[1:])
+            today = _today_date()
+            base_index = today.year * 12 + (today.month - 1) - offset
+            target_year, month_index = divmod(base_index, 12)
+            return datetime.date(target_year, month_index + 1, 1)
+
+        month_lookup = s[:3].lower()
+        month_names = {
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'sept': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+        }
+        if month_lookup in month_names:
+            today = _today_date()
+            return datetime.date(today.year, month_names[month_lookup], 1)
+
         # Handle m/d, m/d/yy, mm/dd/yy, mm/dd/yyyy and variants where year is optional
         # Accept any non-digit separator (/, -, ., space)
         mmdy = re.match(r'^(?P<m>\d{1,2})\D+(?P<d>\d{1,2})(?:\D+(?P<y>\d{2,4}))?$', s)
