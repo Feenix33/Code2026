@@ -28,23 +28,23 @@ class Booklet:
         f1 = Point(1 * fWidth + 3 * margin, 0 * fHeight + 1 * margin)
         f2 = Point(2 * fWidth + 5 * margin, 0 * fHeight + 1 * margin)
         f3 = Point(3 * fWidth + 7 * margin, 0 * fHeight + 1 * margin)
-        corners = [f0, f1, f2, f3, f0]
+        # corners = [f0, f1, f2, f3, f0, f1, f2, f3] #ORIG
+        corners = [f1, f2, f3, f0, f1, f2, f3, f0]
         return corners
 
     def render(self):
         self.corners = self.computePaneCorners()
+        self.rotate = [False, False, False, True, True, True, True, False]
         self.margin = self.config.margin
         self.sizewh = Point( (self.docSize[0] - 8 * self.margin) / 4, (self.docSize[1] - 4 * self.margin) / 2 )
-        # Page.max.x = (self.docSize[0] - 8 * margin) / 4
-        # Page.max.y = (self.docSize[1] - 4 * margin) / 2
-        # Page.mid.x = Page.max.x / 2
-        # Page.mid.y = Page.max.y / 2
         self.canvas = Canvas(self.config.nameOut, pagesize=self.docSize)
 
         self.n = 0
         for page in self.pages:
             if page is not None:
-                page.render(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)
+                # page.render(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)  # ORIG
+                # page.render(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 8], sizewh=self.sizewh) # Test 1
+                page.render(self.canvas, rotate=self.rotate[(self.n%8)], corner=self.corners[self.n % 8], sizewh=self.sizewh) # Test 2
             self.n += 1
             if self.n >= 8:
                 self.canvas.showPage()

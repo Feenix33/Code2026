@@ -222,7 +222,7 @@ def main():
     
     # Override the output filename from the config if command-line argument was provided
     booklet.config.nameOut = output_file
-    
+
     build_book(booklet, specs, PageFactory)
     booklet.render()
 
