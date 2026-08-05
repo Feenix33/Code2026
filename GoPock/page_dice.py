@@ -12,13 +12,29 @@ class PageDice(Page):
         self.title = title
 
     def get_style(self, path):
-        style = super().get_style(path)
-        if path == "font" and style is not None:
-            from dataclasses import replace
-            from data_classes import Font
+        if path != "font":
+            return super().get_style(path)
 
-            if isinstance(style, Font) and "font.name" not in self.overrides:
-                return replace(style, name="Courier")
+        style = super().get_style(path)
+        if style is None:
+            style = Font(name="Courier", size=8)
+        elif not isinstance(style, Font):
+            return style
+
+        from dataclasses import replace
+
+        nested_overrides = {
+            key[len("font."):]: value
+            for key, value in self.overrides.items()
+            if key.startswith("font.")
+        }
+
+        if nested_overrides:
+            style = replace(style, **nested_overrides)
+
+        if "font.name" not in self.overrides and "font.name" not in nested_overrides:
+            style = replace(style, name="Courier")
+
         return style
 
     def notworkingget_style(self, path):

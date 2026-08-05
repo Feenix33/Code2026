@@ -52,11 +52,14 @@ def parse_attributes(text):
     tokens = shlex.split(text)
 
     for token in tokens:
+        token = token.strip()
+        if token.startswith("{") and token.endswith("}"):
+            token = token[1:-1].strip()
         if "=" not in token:
             continue
 
         key, value = token.split("=", 1)
-        attrs[key] = convert_value(value)
+        attrs[key.strip().strip("{} ")] = convert_value(value.strip().strip("{} "))
     return attrs
 
 
@@ -100,9 +103,9 @@ def read_page_specs(filename):
                 attrs.update(parse_attributes(block_line))
         else:
             parts = shlex.split(line)
-            # Support shorthand: "processor filename [path]"
-            # e.g. "froff text01.txt" -> equivalent to:
-            # text { file=text01.txt processor=froff }
+            # Support shorthand:
+            # - "froff text01.txt" -> equivalent to: text { file=text01.txt processor=froff }
+            # - "processor=recipe path=local cChocoChip.txt" -> equivalent to: text { file=cChocoChip.txt processor=recipe path=local }
             try:
                 # Import processors lazily to avoid circular import at module load
                 import processors as _processors
@@ -110,12 +113,48 @@ def read_page_specs(filename):
             except Exception:
                 proc_names = set()
 
-            if len(parts) >= 2 and parts[0].lower() in proc_names and '=' not in parts[1]:
-                page_type = 'text'
-                attrs = {'file': parts[1], 'processor': parts[0]}
-                if len(parts) >= 3:
-                    # optional path argument
-                    attrs['path'] = parts[2]
+            if len(parts) >= 2:
+                first = parts[0].lower()
+                if first in proc_names and '=' not in parts[1]:
+                    page_type = 'text'
+                    attrs = {'processor': parts[0]}
+                    file_token = None
+                    attr_tokens = []
+                    for token in parts[1:]:
+                        if token.startswith('{') or token.endswith('{'):
+                            attr_tokens.append(token)
+                        elif '=' in token:
+                            attr_tokens.append(token)
+                        elif file_token is None:
+                            file_token = token
+                        else:
+                            attr_tokens.append(token)
+                    if file_token is not None:
+                        attrs['file'] = file_token
+                    if attr_tokens:
+                        attrs.update(parse_attributes(' '.join(attr_tokens)))
+                else:
+                    attrs = {}
+                    for token in parts:
+                        if '=' in token:
+                            attrs.update(parse_attributes(token))
+                    if 'processor' in attrs and 'file' not in attrs:
+                        file_token = None
+                        for token in parts:
+                            if '=' not in token and token != 'text':
+                                file_token = token
+                                break
+                        if file_token is not None:
+                            attrs['file'] = file_token
+                            page_type = 'text'
+                        else:
+                            page_type = parts[0]
+                            attrs_text = line[len(page_type):]
+                            attrs = parse_attributes(attrs_text)
+                    else:
+                        page_type = parts[0]
+                        attrs_text = line[len(page_type):]
+                        attrs = parse_attributes(attrs_text)
             else:
                 page_type = parts[0]
                 attrs_text = line[len(page_type):]

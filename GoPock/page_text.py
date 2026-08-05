@@ -50,6 +50,7 @@ class TextPage(Page):
         file_expanded = os.path.expanduser(file_arg)
         if os.path.isabs(file_expanded):
             return file_expanded
+
         if path_arg:
             p = str(path_arg).lower()
             if p == 'local':
@@ -61,8 +62,12 @@ class TextPage(Page):
                 if not os.path.isabs(base):
                     base = os.path.abspath(os.path.join(os.getcwd(), base))
         else:
-            base = os.path.dirname(__file__)
-        return os.path.join(base, file_expanded)
+            base = os.getcwd()
+
+        if os.path.isabs(file_expanded):
+            return file_expanded
+
+        return os.path.abspath(os.path.join(base, file_expanded))
 
     def _ensure_paragraph_styles(self):
         if self._paragraph_styles is None:
@@ -164,70 +169,6 @@ class TextPage(Page):
                 print("WARNING: page break encountered but addPages is disabled; stopping page rendering")
         else:
             print(f"WARNING: unsupported object type {type(obj)} passed to addObject")
-
-    def ORIGIANL_read_and_process(self):
-        if not self._file_arg:
-            if self._processor:
-                proc_obj = processors.get(self._processor)
-                if proc_obj:
-                    use_abbrev = False
-                    if hasattr(self, 'book') and self.book is not None:
-                        use_abbrev = getattr(self.book.config, 'useRecipeAbbreviations', False)
-                    return proc_obj.process(
-                        self.text,
-                        source_path=None,
-                        page=self,
-                        book=self.book,
-                        use_abbreviations=use_abbrev,
-                    )
-            return self.text
-
-        full_path = self._resolve_full_path(self._file_arg, self._path_arg)
-        if not full_path:
-            return f"Error: no file specified"
-
-        try:
-            mtime = os.path.getmtime(full_path)
-        except Exception as e:
-            logger.warning("Cannot stat file %s: %s", full_path, e)
-            return f"Error: cannot access file {self._file_arg}: {e}"
-
-        if self._cache_enabled and self._last_full_path == full_path and self._last_mtime == mtime:
-            return self._last_processed
-
-        try:
-            with open(full_path, 'r', encoding='utf-8') as fh:
-                content = fh.read()
-        except Exception as e:
-            logger.warning("Cannot read file %s: %s", full_path, e)
-            return f"Error: cannot read file {self._file_arg}: {e}"
-
-        if self._processor:
-            proc_obj = processors.get(self._processor)
-            if proc_obj:
-                use_abbrev = False
-                if hasattr(self, 'book') and self.book is not None:
-                    use_abbrev = getattr(self.book.config, 'useRecipeAbbreviations', False)
-                processed = proc_obj.process(
-                    content,
-                    source_path=full_path,
-                    page=self,
-                    book=self.book,
-                    use_abbreviations=use_abbrev,
-                )
-            else:
-                processed = content
-        else:
-            processed = content
-
-        if self._cache_enabled:
-            self._last_full_path = full_path
-            self._last_mtime = mtime
-            self._last_processed = processed
-
-        return processed
-
-    ## vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
     def _read_and_process(self):
         # Gather runtime configuration attributes

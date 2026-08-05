@@ -3,6 +3,7 @@ from reportlab.lib.units import inch
 # import pprint
 
 
+@PageFactory.register("cover")
 @PageFactory.register("title")
 class PageTitle(Page):
     def __init__(self, title="Pocket Planner", **kwargs):
@@ -33,7 +34,7 @@ class PageTitle(Page):
         lines = [line1, line2, line3]
         for line in lines:
             if line is not None:
-                canvas.drawCenteredString(self.mid.x, ypt, line)
+                canvas.drawCentredString(self.mid.x, ypt, line)
             ypt -= self.next_line(canvas)
 
         #draw bounding box
