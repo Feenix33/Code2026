@@ -1,0 +1,146 @@
+# =================================================================
+# TEST SCRIPT 3: MULTI-PAGE DOCUMENT SHOWCASE
+# Checks: Multi-page buffer (showPage), layouts, and document structure
+# =================================================================
+
+# ==================== PAGE 1 ====================
+# Title / Cover Banner
+fillColor("#0B3C5D")
+rect(0, 650, 612, 142, 0, 1)
+
+fillColor("#FFFFFF")
+setFont("Helvetica-Bold", 24)
+drawString(50, 730, "QUARTERLY PERFORMANCE REPORT")
+
+setFont("Helvetica", 12)
+drawString(50, 700, "Generated via ReportLab Low-Level DSL Parser")
+
+fillColor("#328CC1")
+rect(50, 675, 200, 3, 0, 1)
+
+# Executive Summary Section
+setFont("Helvetica-Bold", 14)
+fillColor("#1D2731")
+drawString(50, 590, "Executive Summary")
+
+setFont("Helvetica", 10)
+fillColor("#333333")
+drawString(50, 565, "This document demonstrates automated multi-page PDF generation without PLATYPUS.")
+drawString(50, 550, "All layouts, headers, tables, and pagination footers are positioned explicitly.")
+
+# Key Metric Cards (Row of Rectangles)
+strokeColor("#D9B310")
+fillColor("#F4F6F7")
+setLineWidth(1)
+
+# Card 1
+rect(50, 420, 150, 90, 1, 1)
+fillColor("#0B3C5D")
+setFont("Helvetica-Bold", 18)
+drawCentredString(125, 470, "$128.5K")
+setFont("Helvetica", 9)
+fillColor("#555555")
+drawCentredString(125, 440, "Total Revenue")
+
+# Card 2
+fillColor("#F4F6F7")
+rect(231, 420, 150, 90, 1, 1)
+fillColor("#27AE60")
+setFont("Helvetica-Bold", 18)
+drawCentredString(306, 470, "+24.5%")
+setFont("Helvetica", 9)
+fillColor("#555555")
+drawCentredString(306, 440, "YoY Growth")
+
+# Card 3
+fillColor("#F4F6F7")
+rect(412, 420, 150, 90, 1, 1)
+fillColor("#8E44AD")
+setFont("Helvetica-Bold", 18)
+drawCentredString(487, 470, "1,420")
+setFont("Helvetica", 9)
+fillColor("#555555")
+drawCentredString(487, 440, "Active Accounts")
+
+# Page 1 Footer
+strokeColor("#BDC3C7")
+setLineWidth(0.5)
+line(50, 45, 562, 45)
+setFont("Helvetica", 9)
+fillColor("#7F8C8D")
+drawString(50, 30, "Confidential - Internal Use Only")
+drawRightString(562, 30, "Page 1 of 2")
+
+# Flush Page 1 and transition to Page 2
+showPage()
+
+# ==================== PAGE 2 ====================
+# Running Header for Page 2
+fillColor("#0B3C5D")
+rect(0, 750, 612, 42, 0, 1)
+
+fillColor("#FFFFFF")
+setFont("Helvetica-Bold", 12)
+drawString(50, 765, "QUARTERLY PERFORMANCE REPORT")
+drawRightString(562, 765, "Q3 Breakdown")
+
+# Breakdown Table Section
+setFont("Helvetica-Bold", 14)
+fillColor("#1D2731")
+drawString(50, 700, "Regional Performance Breakdown")
+
+# Table Header
+fillColor("#34495E")
+rect(50, 650, 512, 25, 0, 1)
+
+fillColor("#FFFFFF")
+setFont("Helvetica-Bold", 10)
+drawString(60, 660, "Region")
+drawCentredString(250, 660, "Target")
+drawCentredString(380, 660, "Actual")
+drawRightString(550, 660, "Status")
+
+# Table Row 1
+fillColor("#ECF0F1")
+rect(50, 625, 512, 25, 0, 1)
+fillColor("#2C3E50")
+setFont("Helvetica", 10)
+drawString(60, 635, "North America")
+drawCentredString(250, 635, "$50,000")
+drawCentredString(380, 635, "$58,200")
+fillColor("#27AE60")
+setFont("Helvetica-Bold", 10)
+drawRightString(550, 635, "Exceeded")
+
+# Table Row 2
+fillColor("#FFFFFF")
+rect(50, 600, 512, 25, 0, 1)
+fillColor("#2C3E50")
+setFont("Helvetica", 10)
+drawString(60, 610, "Europe & UK")
+drawCentredString(250, 610, "$40,000")
+drawCentredString(380, 610, "$41,500")
+fillColor("#27AE60")
+setFont("Helvetica-Bold", 10)
+drawRightString(550, 610, "Met Target")
+
+# Table Row 3
+fillColor("#ECF0F1")
+rect(50, 575, 512, 25, 0, 1)
+fillColor("#2C3E50")
+setFont("Helvetica", 10)
+drawString(60, 585, "Asia Pacific")
+drawCentredString(250, 585, "$35,000")
+drawCentredString(380, 585, "$28,800")
+fillColor("#C0392B")
+setFont("Helvetica-Bold", 10)
+drawRightString(550, 585, "Under")
+
+# Page 2 Footer
+strokeColor("#BDC3C7")
+setLineWidth(0.5)
+line(50, 45, 562, 45)
+setFont("Helvetica", 9)
+fillColor("#7F8C8D")
+drawString(50, 30, "Confidential - Internal Use Only")
+drawRightString(562, 30, "Page 2 of 2")

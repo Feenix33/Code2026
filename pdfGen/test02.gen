@@ -1,0 +1,94 @@
+# =================================================================
+# TEST SCRIPT 2: VECTOR PATHS & GEOMETRIC ART
+# Checks: Complex path objects, custom polygons, and fill combinations
+# =================================================================
+
+# --- Header ---
+fillColor("#1A252F")
+rect(0, 732, 612, 60, 0, 1)
+
+fillColor("#ECF0F1")
+setFont("Helvetica-Bold", 18)
+drawCentredString(306, 755, "Test Script 02: Vector Graphics & Custom Paths")
+
+# --- Section 1: Complex Polygon (5-Point Star) ---
+setFont("Helvetica-Bold", 12)
+fillColor("#2C3E50")
+drawString(50, 680, "1. Vector Path Star Geometry (beginPath / drawPath)")
+
+strokeColor("#F39C12")
+fillColor("#F1C40F")
+setLineWidth(2)
+
+beginPath()
+moveTo(306, 640)
+lineTo(323, 588)
+lineTo(378, 588)
+lineTo(333, 555)
+lineTo(350, 503)
+lineTo(306, 535)
+lineTo(262, 503)
+lineTo(279, 555)
+lineTo(234, 588)
+lineTo(289, 588)
+closePath()
+drawPath(1, 1)
+
+# --- Section 2: Overlapping Transparent/Colored Paths ---
+setFont("Helvetica-Bold", 12)
+fillColor("#2C3E50")
+drawString(50, 450, "2. Overlapping Vector Shapes")
+
+# Triangle 1 (Blue)
+strokeColor("#1B4F72")
+fillColor("#3498DB")
+setLineWidth(2)
+
+beginPath()
+moveTo(100, 250)
+lineTo(250, 400)
+lineTo(250, 250)
+closePath()
+drawPath(1, 1)
+
+# Triangle 2 (Red - Overlapping)
+strokeColor("#78281F")
+fillColor("#E74C3C")
+
+beginPath()
+moveTo(200, 250)
+lineTo(200, 400)
+lineTo(350, 250)
+closePath()
+drawPath(1, 1)
+
+# --- Section 3: Custom Curved/Stepped Line Chart ---
+setFont("Helvetica-Bold", 12)
+fillColor("#2C3E50")
+drawString(50, 200, "3. Vector Path Line Plot")
+
+# Axes
+strokeColor("#7F8C8D")
+setLineWidth(1)
+line(50, 60, 550, 60)
+line(50, 60, 50, 170)
+
+# Plot Data Path
+strokeColor("#27AE60")
+setLineWidth(3)
+
+beginPath()
+moveTo(50, 70)
+lineTo(120, 110)
+lineTo(190, 85)
+lineTo(260, 150)
+lineTo(330, 120)
+lineTo(400, 160)
+lineTo(470, 95)
+lineTo(540, 140)
+drawPath(1, 0)  # Stroke only, no fill
+
+# Footer
+fillColor("#95A5A6")
+setFont("Helvetica", 9)
+drawCentredString(306, 30, "Page 1 - End of Vector Path Test")
