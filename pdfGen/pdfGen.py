@@ -34,6 +34,9 @@ Features Implemented:
    - `setFont(name, size)`: Configures PDF font face and size.
    - Positioned string rendering: `drawString(x, y, text)` (left-aligned), 
      `drawCentredString(x, y, text)` (center-aligned), and `drawRightString(x, y, text)` (right-aligned).
+
+
+Leter size = (612, 792)
 """
 
 import sys
