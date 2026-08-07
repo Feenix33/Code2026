@@ -9,6 +9,7 @@ This program demonstrates three important ideas:
 from args import get_arguments
 from grid import GridGenerator
 from pygame_renderer import PygameRenderer
+
 def main():
     """
     Main program.

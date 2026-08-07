@@ -3,12 +3,14 @@ Pygame renderer.
 """
 import pygame
 from renderer import Renderer
-from terrain_style import TerrainStyleSet
+#from terrain_style import TerrainStyleSet
+from styles.screen import STYLE
 from gamemap import GameMap
 
 class PygameRenderer(Renderer):
     def __init__(self, cell_size=40):
         self.cell_size = cell_size
+
     def render(self, generator):
         # Create the initial map
         game_map = generator.generate()
@@ -20,7 +22,7 @@ class PygameRenderer(Renderer):
         screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Grid Demo")
         running = True
-        styles = TerrainStyleSet()
+        styles = STYLE #TerrainStyleSet()
         while running:
             #
             # Handle keyboard and window events.
@@ -63,21 +65,7 @@ class PygameRenderer(Renderer):
                         rect,
                         1
                     )
-                    #
-                    # If the grid value is 1,
-                    # fill the square gray.
-                    #
-                    """
-                    if grid[row][col] == 1:
-                        pygame.draw.rect(
-                            screen,
-                            (180, 180, 180),
-                            rect.inflate(-4, -4)
-                        )
-                    """
-                    #cell = grid[row][col]
                     cell = game_map.cells[row][col]
-                    #style = STYLE[cell.terrain]
                     style = styles.get(cell.terrain)
                     pygame.draw.rect(screen,
                                      style.fill_color,

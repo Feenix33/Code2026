@@ -10,13 +10,10 @@ from renderer import Renderer
 
 
 class PdfRenderer(Renderer):
-
     def __init__(self, filename):
-
         self.filename = filename
 
     def render(self, grid):
-
         print(
             f"PDF renderer not implemented yet.\n"
             f"Would save to {self.filename}"
