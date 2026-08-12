@@ -1,0 +1,9 @@
+# defaults {     font.size=8 }
+book {
+     addPages=True
+     useRecipeAbbreviations=True
+}
+title title="Beans" line2="Aug 2026"
+recipe CreamyWhiteBeans.txt
+recipe rPuertoBeans.txt
+recipe bMarryMe.txt
