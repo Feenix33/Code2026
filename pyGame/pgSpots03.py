@@ -20,6 +20,7 @@ g_background_color = (128,128,128)
 g_circle_count = 600
 g_min_radius = 5
 g_max_radius = 80
+g_fails = 40
 
 
 # ----------------------------------------------------------------------
@@ -81,9 +82,10 @@ def drawSpot(screen, bkgrnd, maxR):
     clr = randomColor()
     r = get_max_radius(screen, x, y, bkgrnd, maxR)
 
-    if r > 0:
+    if r > 1:
         pygame.draw.circle(screen, clr, (x, y), r, )
         pygame.draw.circle(screen,(0,0,0),(x,y),r,width=1)
+    return r
     
 
 
@@ -92,9 +94,12 @@ def render_graphics(screen):
     # Clear the screen
     screen.fill(g_background_color)
 
+    count = 0
     # Draw random circles
-    for _ in range(g_circle_count):
-        drawSpot(screen, g_background_color, g_max_radius)
+    # for _ in range(g_circle_count):
+    while count < g_fails:
+        r = drawSpot(screen, g_background_color, g_max_radius)
+        if r == 1: count += 1
 
     # Make the drawing visible
     pygame.display.flip()
