@@ -56,7 +56,7 @@ class Booklet:
     
     def insertOverflow(self, page):
         import sys
-        # print(f"DEBUG {sys._getframe().f_code.co_name}(page.debugID) Attempting page insertion n={self.n}")
+        print(f"DEBUG Booklet.inserOverflow() likely problem w/adding a new page is here")
         page.renderEnd(self.canvas, rotate=((self.n%8) not in [0, 1, 2, 3]), corner=self.corners[self.n % 4], sizewh=self.sizewh)
         self.n += 1
         if self.n >= 8:

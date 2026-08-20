@@ -24,6 +24,7 @@ import page_dice
 import page_month
 import page_monthref
 import page_image
+import page_reportlab
 from utils import read_page_specs, build_book
 
 # Version constant
@@ -40,21 +41,6 @@ DEFAULT_BOOKLET_SPECS = [
 ]
 
 """
-Main TODO:
-x Debug frames or add manually (might be there already)
-x Convert CanvasThreePart in page.py to the new drawCanvas...
-- Consistent use of next_line()
-x all pages should do a setLineSpec() as part of the base class
-x tracker check if no arguments, should have default blank lines
-x weekly tracker should have day offset like monthly tracker
-x weekday offset should be same as month & monthref
-- simplify the title font parameters
-x check that we use title font for title, then switch to standard font for the rest of the page
-x help guide updates
-- Determine what line_number is in the PageSpec
-x Month and MonthRef take a date that is month name or number only and translate
-
-
 Hints:
 ================================================================================================
 x = get_value()
@@ -140,7 +126,7 @@ DESCRIPTION:
 
 INPUT FILE FORMAT:
     - Lines starting with # are comments and are ignored
-    - Page types: blank, text, title, grid, lines, checklist, tracker, montrack
+    - Page types: blank, text, title, grid, lines, checklist, tracker, montrack, reportlab
     - Booklet settings: addPages, margin, useRecipeAbbreviations, nameOut
     - Page style defaults: font.name, font.size, font.color, colorLine, etc.
 

@@ -19,11 +19,6 @@ TODO
 operation: the processor is passing a pargraph style object, not using the ones from text page
 need to get rid of the debug in the old program and adjust the spaceAfter if the font size changes
 rest should be good
-
-- if change fontsize need to change spacing too
-- Potentiall add more heading styles for the markdown processor
-- Add the other troff commands
-
 """
 
 @PageFactory.register("text")

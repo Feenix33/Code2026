@@ -6,7 +6,6 @@ from xml.sax.saxutils import escape
 import re
 from utils import parse_attributes
 from style_registry import DEFAULT_PARAGRAPH_STYLE_NAME, DEFAULT_PARAGRAPH_STYLE_FOR_RECIPE
-
 import re
 
 """
@@ -631,3 +630,4 @@ class MarkdownProcessor(Processor):
 
             # Reset numbered list counts when breaking clear of an active block
             self._list_counters.clear()
+

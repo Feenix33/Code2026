@@ -1,7 +1,10 @@
 tt*.py
 *.txt
+*.pdf
 assets
 */archive/*
 VSLearn
 VSLearn/*
+scratch
+scratch/*
 __pycache__
