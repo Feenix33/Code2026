@@ -2,18 +2,22 @@ import ast
 import os
 
 from page import Page, PageFactory
+from reportlab.lib import colors
 
+"""
+max = 178 x 286
+"""
 
 @PageFactory.register("reportlab")
 class ReportLabPage(Page):
     """Draw a page from a file containing simple ReportLab canvas commands."""
 
-    _COMMAND_ALIASES = {
-        "strokeColor": "setStrokeColor",
-        "fillColor": "setFillColor",
-        "closePath": "close",
-    }
-    _PATH_COMMANDS = {"moveTo", "lineTo", "curveTo", "closePath"}
+    # _COMMAND_ALIASES = {
+    #     "strokeColor": "setStrokeColor",
+    #     "fillColor": "setFillColor",
+    #     "closePath": "close",
+    # }
+    # _PATH_COMMANDS = {"moveTo", "lineTo", "curveTo", "closePath"}
 
     def __init__(self, file=None, filename=None, path=None, **kwargs):
         super().__init__()
@@ -43,63 +47,100 @@ class ReportLabPage(Page):
 
         return os.path.abspath(os.path.join(base, file_path))
 
-    @staticmethod
-    def _literal(node):
-        try:
-            return ast.literal_eval(node)
-        except (ValueError, TypeError, SyntaxError) as error:
-            raise ValueError("ReportLab command arguments must be literals") from error
+    def tokenize_function_line(self, line_str):
+        # 1. Parse the string into an AST tree
+        # ast.parse returns a 'Module' node; we grab the first statement
+        expr_stmt = ast.parse(line_str.strip()).body[0]
 
-    def _run_command(self, canvas, expression, path):
-        if not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name):
-            raise ValueError("Only direct ReportLab command calls are supported")
-
-        command_name = expression.func.id
-        if command_name == "showPage":
-            return path
-
-        if command_name == "beginPath":
-            if expression.args or expression.keywords:
-                raise ValueError("beginPath does not accept arguments")
-            return canvas.beginPath()
-
-        if command_name == "drawPath":
-            if path is None:
-                raise ValueError("drawPath requires a preceding beginPath()")
-            target = canvas
-            args = [path] + [self._literal(argument) for argument in expression.args]
-        else:
-            target = path if path is not None and command_name in self._PATH_COMMANDS else canvas
-            command_name = self._COMMAND_ALIASES.get(command_name, command_name)
-            args = [self._literal(argument) for argument in expression.args]
-
-        command = getattr(target, command_name, None)
-        if command is None or not callable(command) or command_name.startswith("_"):
-            raise ValueError(f"Unsupported ReportLab command '{command_name}'")
-
-        keywords = {
-            keyword.arg: self._literal(keyword.value)
-            for keyword in expression.keywords
-            if keyword.arg is not None
+        # 2. Ensure it's actually a function call
+        if not isinstance(expr_stmt, ast.Expr) or not isinstance(expr_stmt.value, ast.Call):
+            raise ValueError("[{line_str}] is not a valid function call structure.")
+            
+        call_node = expr_stmt.value
+        
+        # 3. Extract the function name (the 'id' of the Name node)
+        function_name = call_node.func.id
+        
+        # 4. Extract the arguments back into their raw string representations
+        # ast.unparse() requires Python 3.9+
+        arguments = [ast.unparse(arg).strip() for arg in call_node.args]
+        
+        return {
+            "function": function_name,
+            "arguments": arguments
         }
-        if len(keywords) != len(expression.keywords):
-            raise ValueError("ReportLab command keywords must have names")
-        command(*args, **keywords)
-        return path
+
+
+    def handle_command(self, canvas, fcn, args):
+        numArgs = len(args)
+        match fcn.lower():
+            ## Colors
+            case 'strokecolor' if numArgs >= 1:
+                canvas.setStrokeColor(args[0]) 
+            case 'fillcolor' if numArgs >= 1:
+                canvas.setFillColor(args[0]) 
+
+            # line control
+            case 'setlinewidth':
+                w = int(args[0])
+                canvas.setLineWidth(w)
+                # print ('lw')
+            case 'setdash':
+                if numArgs >= 2:
+                    dashOn, dashOff = (int(x) for x in args[:2])
+                    canvas.setDash([dashOn, dashOff])
+                else: # assume reset
+                    canvas.setDash([])
+
+            # drawing
+            case 'line' if numArgs >= 4:
+                x1, y1, x2, y2 = (int(x) for x in args[:4])
+                canvas.line(x1,y1,x2,y2)
+
+            case 'rect' | 'rectangle' if numArgs >= 4:
+                x, y, w, h = (int(x) for x in args[:4])
+                stroke = int(args[4]) if numArgs >= 5 else 1
+                fill = int(args[4]) if numArgs >= 6 else 0
+                canvas.rect(x, y, w, h, stroke=stroke, fill=fill) 
+            case 'ellipse' if numArgs >= 4:
+                x1, y1, x2, y2 = (int(x) for x in args[:4])
+                stroke = int(args[4]) if numArgs >= 5 else 1
+                fill = int(args[4]) if numArgs >= 6 else 0
+                canvas.ellipse(x1,y1, x2,y2, stroke=stroke, fill=fill)
+            case 'arc' if numArgs >= 4:
+                x1, y1, x2, y2 = (int(x) for x in args[:4])
+                canvas.arc(x1,y1,x2,y2) 
+
+            # strings
+            case 'drawstring' | 'string' if numArgs >= 3: 
+                x, y = (int(x) for x in args[:2])
+                text = str(args[2])
+                canvas.drawString(x, y, text)
+
+            # font control
+
+            # unknown
+            case _:
+                print (f"reportlab page unhandled command: {fcn}")
 
     def draw(self, canvas):
         full_path = self._resolve_full_path()
         if not full_path:
             raise ValueError("reportlab page requires a file= attribute")
 
+        # save the state
+        canvas.saveState()
+
         with open(full_path, "r", encoding="utf-8") as command_file:
             source = command_file.read()
+            for fileline in source.splitlines():
+                # process the line
+                line = fileline.strip()
+                if len(line) == 0 or line[0] == '#': # comment
+                    continue
+                tokens = self.tokenize_function_line(line)
+                if tokens != None: args = tokens['arguments']
+                self.handle_command(canvas, tokens['function'].lower(), args)
 
-        tree = ast.parse(source, filename=full_path, mode="exec")
-        path = None
-        for statement in tree.body:
-            if isinstance(statement, ast.Pass):
-                continue
-            if not isinstance(statement, ast.Expr):
-                raise ValueError("ReportLab command files may only contain command calls")
-            path = self._run_command(canvas, statement.value, path)
+        #restore the state
+        canvas.restoreState()

@@ -1,0 +1,20 @@
+# Dashed thick line
+#setLineWidth(3)
+#setDash(6, 3)
+#strokeColor("#E74C3C")
+#line(50, 70, 150, 200)
+
+#setLineWidth(1)
+#strokecolor('blue')
+#fillcolor("#8057af")
+#setDash([])
+#rect(10, 10, 20, 10, 1, 1)
+
+#fillcolor("lavender")
+#ellipse(100, 200, 120, 220, 1, 1)
+
+#strokecolor('red')
+#drawString(10, 100, 'hello')
+
+strokecolor('orange')
+arc(50, 50, 100, 100)
