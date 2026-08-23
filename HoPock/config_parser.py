@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-import shlex
 import re
+import shlex
 
 
 @dataclass
@@ -12,7 +12,7 @@ class ConfigEntry:
 
 class ConfigParser:
     """
-    Parses a simple page configuration file.
+    Parse a pocket project configuration file.
 
     Supported forms:
 
@@ -21,19 +21,39 @@ class ConfigParser:
         page_type {
             option1=value
             option2=value
+            Text goes here
+            More text goes here
         }
 
-    Special page types may also contain arbitrary text.
+    Page types and option names are case-insensitive and are returned
+    in lowercase.
+
+    Option values and text retain their original case.
+
+    Option values containing spaces must be enclosed in double quotes:
+
+        title="This is a title"
+
+    Options may be continued onto additional physical lines using
+    a backslash:
+
+        page1 fontsize=10 \
+        color=red
+
+    The above is equivalent to:
+
+        page1 fontsize=10 color=red
     """
 
-    def __init__(self, special_types=None):
-        self.special_types = set(special_types or [])
-
     def parse_file(self, filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            return self.parse_lines(f)
+        """Read and parse a configuration file."""
+
+        with open(filename, "r", encoding="utf-8") as file:
+            return self.parse_lines(file)
 
     def parse_lines(self, lines):
+        """Parse configuration from an iterable of lines."""
+
         entries = []
 
         lines = iter(lines)
@@ -41,7 +61,7 @@ class ConfigParser:
         for raw_line in lines:
             line = raw_line.strip()
 
-            # Ignore comments and blank lines outside entries
+            # Ignore blank lines and comments outside an entry.
             if not line or line.startswith("#"):
                 continue
 
@@ -53,147 +73,57 @@ class ConfigParser:
         return entries
 
     def _parse_entry(self, first_line, lines):
-        """
-        Parse one page entry.
-        """
+        """Parse the first line of an entry."""
 
-        # Find the page type
         parts = first_line.split(None, 1)
-        page_type = parts[0]
 
+        page_type = parts[0].lower()
         remainder = parts[1] if len(parts) > 1 else ""
 
-        # Is this a braced block?
+        # No options or block.
+        if not remainder:
+            return ConfigEntry(page_type=page_type)
+
+        # Braced block.
         if remainder.startswith("{"):
             content = remainder[1:].lstrip()
 
-            # Everything is on one line
+            # Entire block is on one line.
             if "}" in content:
                 content = content.split("}", 1)[0]
 
-                if page_type in self.special_types:
-                    return self._parse_special_inline(
-                        page_type, content
-                    )
-
-                return ConfigEntry(
-                    page_type=page_type,
-                    options=self._parse_options(content)
+                return self._parse_inline_block(
+                    page_type,
+                    content
                 )
 
-            # Multi-line block
-            return self._parse_block(page_type, content, lines)
-
-        # No braces -- options end at the end of this line
-        return ConfigEntry(
-            page_type=page_type,
-            options=self._parse_options(remainder)
-        )
-
-    def _parse_block(self, page_type, first_content, lines):
-        """
-        Parse a {...} block.
-        """
-
-        if page_type in self.special_types:
-            return self._parse_special_block(
+            # Multi-line block.
+            return self._parse_block(
                 page_type,
-                first_content,
+                content,
                 lines
             )
 
-        # Normal page type -- everything inside braces is options
-        option_lines = []
-
-        if first_content:
-            option_lines.append(first_content)
-
-        for raw_line in lines:
-            line = raw_line.strip()
-
-            if line.startswith("#"):
-                continue
-
-            if "}" in line:
-                before_close = line.split("}", 1)[0]
-
-                if before_close:
-                    option_lines.append(before_close)
-
-                break
-
-            if line:
-                option_lines.append(line)
-
-        option_text = " ".join(option_lines)
+        # No braces -- options continue only if the line
+        # uses the continuation character.
+        option_text = self._collect_continued_line(
+            remainder,
+            lines
+        )
 
         return ConfigEntry(
             page_type=page_type,
             options=self._parse_options(option_text)
         )
 
-    def _parse_special_block(self, page_type, first_content, lines):
+    def _parse_inline_block(self, page_type, content):
         """
-        Parse a special block containing both options and text.
-
-        Option lines must contain key=value.
-        Once a non-option line is encountered, remaining lines
-        are treated as text.
+        Parse a block where the opening and closing braces
+        occur on the same line.
         """
 
-        options = {}
-        text = []
-
-        text_mode = False
-
-        if first_content:
-            if self._looks_like_option(first_content):
-                options.update(self._parse_options(first_content))
-            else:
-                text_mode = True
-                text.append(first_content)
-
-        for raw_line in lines:
-            raw = raw_line.rstrip("\r\n")
-
-            # Closing brace
-            if raw.strip() == "}":
-                break
-
-            # Comments while still parsing options
-            if not text_mode and raw.strip().startswith("#"):
-                continue
-
-            # Blank line switches to text mode
-            if not text_mode and not raw.strip():
-                text_mode = True
-                continue
-
-            if not text_mode:
-                if self._looks_like_option(raw):
-                    options.update(self._parse_options(raw))
-                    continue
-
-                # First non-option line starts the text
-                text_mode = True
-
-            if text_mode:
-                text.append(raw)
-
-        return ConfigEntry(
-            page_type=page_type,
-            options=options,
-            text=text
-        )
-
-    def _parse_special_inline(self, page_type, content):
-        """
-        Handle:
-
-            special_type { option=value text... }
-
-        This is mainly useful if the entire block is on one line.
-        """
+        if not content.strip():
+            return ConfigEntry(page_type=page_type)
 
         if self._looks_like_option(content):
             return ConfigEntry(
@@ -206,12 +136,157 @@ class ConfigParser:
             text=[content]
         )
 
+    def _parse_block(self, page_type, first_content, lines):
+        """
+        Parse a multi-line {...} block.
+
+        Initially, lines containing key=value are treated as options.
+
+        Once a non-option line is encountered, the parser switches
+        permanently to text mode.
+
+        A blank line also switches to text mode.
+
+        Option lines can use the continuation character '\\'.
+        """
+
+        options = {}
+        text = []
+
+        text_mode = False
+
+        # Handle anything appearing after the opening {.
+        if first_content:
+            if self._looks_like_option(first_content):
+                option_text, continuation = self._collect_continued_line(
+                    first_content,
+                    lines,
+                    return_continuation=True
+                )
+
+                options.update(
+                    self._parse_options(option_text)
+                )
+
+                # If continuation was requested, _collect_continued_line
+                # has already consumed the necessary lines.
+            else:
+                text_mode = True
+                text.append(first_content)
+
+        for raw_line in lines:
+
+            # Remove only newline characters.
+            # This preserves text otherwise.
+            raw = raw_line.rstrip("\r\n")
+
+            stripped = raw.strip()
+
+            # Closing brace.
+            if stripped == "}":
+                break
+
+            # Comments are ignored while still reading options.
+            if not text_mode and stripped.startswith("#"):
+                continue
+
+            # Blank line switches to text mode.
+            if not text_mode and not stripped:
+                text_mode = True
+                continue
+
+            if not text_mode:
+
+                if self._looks_like_option(raw):
+                    option_text = self._collect_continued_line(
+                        raw,
+                        lines
+                    )
+
+                    options.update(
+                        self._parse_options(option_text)
+                    )
+
+                    continue
+
+                # First non-option line starts text.
+                text_mode = True
+
+            if text_mode:
+                text.append(raw)
+
+        return ConfigEntry(
+            page_type=page_type,
+            options=options,
+            text=text
+        )
+
+    @staticmethod
+    def _collect_continued_line(
+        first_line,
+        lines,
+        return_continuation=False
+    ):
+        """
+        Collect a logical line that may span multiple physical lines.
+
+        A line ending in '\\' continues onto the next physical line.
+
+        For example:
+
+            fontsize=10 \\
+            color=red
+
+        becomes:
+
+            fontsize=10 color=red
+
+        The continuation character itself is removed.
+        """
+
+        parts = []
+        current = first_line
+
+        while True:
+
+            stripped = current.rstrip()
+
+            if stripped.endswith("\\"):
+                parts.append(stripped[:-1].rstrip())
+
+                try:
+                    current = next(lines)
+                except StopIteration:
+                    raise ValueError(
+                        "Configuration line ends with '\\' "
+                        "but no continuation line was found."
+                    )
+
+                current = current.rstrip("\r\n")
+
+                # A blank continuation line is probably an error.
+                if not current.strip():
+                    raise ValueError(
+                        "Blank line found after a line-continuation "
+                        "character '\\'."
+                    )
+
+            else:
+                parts.append(current.strip())
+                break
+
+        result = " ".join(parts)
+
+        if return_continuation:
+            return result, len(parts) > 1
+
+        return result
+
     @staticmethod
     def _looks_like_option(line):
         """
-        Determine whether a line looks like:
-
-            key=value
+        Return True if a line begins with something that looks
+        like an option name followed by '='.
         """
 
         return re.match(
@@ -222,27 +297,82 @@ class ConfigParser:
     @staticmethod
     def _parse_options(text):
         """
-        Parse:
+        Parse options from a string.
 
-            option1=value option2="text with spaces"
+        Whitespace around '=' is optional.
 
-        into a dictionary.
+        Examples:
+
+            fontsize=12
+            fontsize =12
+            fontsize= 12
+            fontsize = 12
+            title="This Is A Title"
+            title = "This Is A Title"
+
+        Option names are converted to lowercase.
+        Option values retain their original case.
         """
 
         if not text.strip():
             return {}
 
-        tokens = shlex.split(text)
-
         options = {}
 
-        for token in tokens:
-            if "=" not in token:
+        # Match option name followed by '=' and capture the value.
+        #
+        # The value continues until the next option name followed by '='.
+        option_pattern = re.compile(
+            r"""
+            ([A-Za-z_][A-Za-z0-9_.-]*)   # option name
+            \s*=\s*                       # equals sign
+            (
+                "(?:\\.|[^"])*"           # quoted value
+                |
+                '(?:\\.|[^'])*'            # or single-quoted value
+                |
+                .*?                       # or unquoted value
+            )
+            (?=
+                \s+[A-Za-z_][A-Za-z0-9_.-]*\s*=  # next option
+                |
+                $
+            )
+            """,
+            re.VERBOSE
+        )
+
+        matches = option_pattern.finditer(text)
+
+        consumed = 0
+
+        for match in matches:
+            key = match.group(1).lower()
+            value = match.group(2).strip()
+
+            if not key:
                 raise ValueError(
-                    f"Expected option=value, got: {token!r}"
+                    f"Invalid option syntax: {match.group(0)!r}"
                 )
 
-            key, value = token.split("=", 1)
-            options[key.strip()] = value
+            # Remove matching quotes from the value.
+            if (
+                len(value) >= 2
+                and value[0] == value[-1]
+                and value[0] in ('"', "'")
+            ):
+                value = value[1:-1]
+
+            options[key] = value
+
+            consumed = match.end()
+
+        # Make sure we consumed the entire input.
+        if text[consumed:].strip():
+            raise ValueError(
+                f"Invalid option syntax near: "
+                f"{text[consumed:].strip()!r}. "
+                f"Expected option=value."
+            )
 
         return options

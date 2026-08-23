@@ -1,8 +1,6 @@
 from config_parser import ConfigParser, ConfigEntry
 
-parser = ConfigParser(
-    special_types={"special_type"}
-)
+parser = ConfigParser()
 
 entries = parser.parse_file("parser.p8")
 

@@ -12,6 +12,8 @@ __pycache__/
 venv/
 ENV/
 env/
+# put stuff that is old here that don't want tracking
+archive/
 
 # ==============================================================================
 # Testing and Coverage Reports

@@ -1,12 +1,13 @@
 import argparse
 import sys
-from config import parse_p8_file
+from archive.config import parse_p8_file
 from engine import BookletEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Pocket: Turn text and images into a PDF booklet.")
-    parser.add_argument("manifest", help="Path to your input configuration file (e.g., booklet.p8)")
+    parser.add_argument("manifest", default="pocket.p8", help="Path to your input configuration file (e.g., booklet.p8)")
     parser.add_argument("-o", "--output", default="output.pdf", help="Name of the output PDF file")
+    parser.add_argument("-i", "--input", default="pocket.p8", help="Configuration definition file")
     
     args = parser.parse_args()
     
