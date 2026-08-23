@@ -1,0 +1,45 @@
+# ==============================================================================
+# Python Cache and Bytecode
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==============================================================================
+# Virtual Environments (Local dependencies)
+# ==============================================================================
+.venv/
+venv/
+ENV/
+env/
+
+# ==============================================================================
+# Testing and Coverage Reports
+# ==============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==============================================================================
+# Pocket Tool - Local Outputs & Sample Test Artifacts
+# ==============================================================================
+# Ignore any generated PDF outputs so your repository stays light
+*.pdf
+
+# Ignore any general input files
+*.txt
+
+# Optional: If you want to keep your development/scratchpad .p8 files out of git,
+# but keep an example file, uncomment the next line:
+*.p8
+chapter1.md
+
+# ==============================================================================
+# Editor and OS Specific Files
+# ==============================================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
