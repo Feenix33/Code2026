@@ -1,4 +1,4 @@
-from config_parser import ConfigParser
+from definition_parser import DefinitionParser
 
 
 def test_normal_options():
@@ -6,7 +6,7 @@ def test_normal_options():
         "daily fontsize=12 color=red",
     ]
 
-    parser = ConfigParser()
+    parser = DefinitionParser()
     entries = parser.parse_lines(lines)
 
     assert len(entries) == 1

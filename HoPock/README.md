@@ -5,7 +5,7 @@ pocket_project/
 ├── README.md
 ├── requirements.txt
 ├── pocket.py               <-- Main entry point stays in root
-├── config.py               <-- Configuration parser stays in root
+├── config.py               <-- Definitionuration parser stays in root
 ├── engine.py               <-- Master PDF assembler stays in root
 │
 ├── generators/             <-- New Folder (Put your 10 generator files here)

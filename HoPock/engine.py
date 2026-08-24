@@ -2,10 +2,10 @@
 This ties your processors and generators together and compiles the final pages into a PDF.
 """
 
-from processors import AsciiProcessor, MarkdownProcessor, ImageProcessor
-from generators import CurrentMonthGenerator, TableOfContentsGenerator
+# from processors import AsciiProcessor, MarkdownProcessor, ImageProcessor
+# from generators import CurrentMonthGenerator, TableOfContentsGenerator
 
-class BookletEngine:
+class OrigBookletEngine:
     def __init__(self, pages_list, output_name):
         self.pages_list = pages_list
         self.output_name = output_name
@@ -38,3 +38,10 @@ class BookletEngine:
         # like ReportLab, FPDF2, or WeasyPrint to draw the booklet.
         print(f"DEBUG: Assembling {len(compiled_pages)} pages into {self.output_name}")
 
+class BookletEngine:
+    def __init__(self, cfgBook):
+        self.pages_list = pages_list
+
+    def build(self):
+        compiled_pages = []
+        print(f"DEBUG: Assembling {len(compiled_pages)} pages into {self.output_name}")
