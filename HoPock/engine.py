@@ -1,6 +1,7 @@
 """
 This ties your processors and generators together and compiles the final pages into a PDF.
 """
+from models.config import BookletConfig, PageConfig
 
 # from processors import AsciiProcessor, MarkdownProcessor, ImageProcessor
 # from generators import CurrentMonthGenerator, TableOfContentsGenerator
@@ -39,8 +40,13 @@ class OrigBookletEngine:
         print(f"DEBUG: Assembling {len(compiled_pages)} pages into {self.output_name}")
 
 class BookletEngine:
-    def __init__(self, cfgBook):
-        self.pages_list = pages_list
+    def __init__(self, dfnBook):
+        self.cfg = BookletConfig(
+            pages = [PageConfig(), PageConfig()]
+        )
+
+        # process the definition structure into the config structure
+        print ("created ")
 
     def build(self):
         compiled_pages = []

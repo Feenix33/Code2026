@@ -2,7 +2,9 @@ import argparse
 import sys
 
 from definition_parser import DefinitionParser
-from engine import BookletEngine
+from config_builder import build_configuration
+
+# from engine import BookletEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Pocket: Turn text and images into a PDF booklet.")
@@ -20,22 +22,22 @@ def main():
     
     # 1. Parse the .p8 file
     try:
-        cfgParser = DefinitionParser()
-        pages_to_render = cfgParser.parse_file(args.manifest)
-        for entry in pages_to_render:
-            print (entry)
+        dfnParser = DefinitionParser()
+        bookletDefinition = dfnParser.parse_file(args.manifest)
     except Exception as e:
         print(f"Error reading definition file: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # 2. Resolve any overrides from command line arguments and input cfg file
-    # TODO add here
-        
+    # 2 Translate definition into configuration and style
+    cfgBooklet = build_configuration(bookletDefinition)
+
+          
     # 3. Build the PDF
-    print(f"Building your booklet from '{args.manifest}'...")
-    engine = BookletEngine(pages_to_render)
-    # engine.build()
-    print(f"Success! Saved to {args.output}")
+    # print(f"Building your booklet from '{args.manifest}'...")
+    # engine = BookletEngine(pages_to_render)
+    # # engine.build()
+    # print(f"Success! Saved to {args.output}")
+    print ('Fini')
 
 if __name__ == "__main__":
     main()
