@@ -3,6 +3,7 @@ import sys
 
 from definition_parser import DefinitionParser
 from config_builder import build_configuration
+from pages.factory import PageFactory
 
 # from engine import BookletEngine
 
@@ -19,7 +20,10 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
+    # 0. Some debug testing
+    print("Registered pages:", PageFactory._pages.keys())
+
     # 1. Parse the .p8 file
     try:
         dfnParser = DefinitionParser()

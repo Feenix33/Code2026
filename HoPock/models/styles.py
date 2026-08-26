@@ -14,16 +14,21 @@ class Font:
 
 @dataclass
 class BookletStyle:
+    # Booklet parameters that should be global and not overriden by pages
+    border: int = 10
+
+    # Page parameters, can be overridden. Should see all of these in PageStyle
     font: Font = field(default_factory=lambda: Font(
         name = "Helvetica",
         size = 8,
         color = "black"
     ))
-    border: int = 10
+    showpage: int = 0   # show page number or not (for testing)
 
 
 @dataclass
 class PageStyle:
+    # All these fields should be in the Booklet Style class 
     font: Font = field(default_factory=Font)   # override font for this page
     showpage: int = 0   # show page number or not (for testing)
 

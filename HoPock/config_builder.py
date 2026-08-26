@@ -1,29 +1,118 @@
 """
 Translates the p8 files into the booklet config file and styles
 """
-from models.config import BookletConfig, PageConfig
-from models.styles import *
-from definition_parser import DefinitionEntry
+from dataclasses import fields, is_dataclass
+from types import UnionType
+from typing import Union, get_args, get_origin, get_type_hints
 
-STYLE_PARAMETERS = {
-    "font",
-    "fontsize",
-    "fontcolor"
-}
+from models.config import (
+    PageConfig,
+    BookletConfig,
+)
 
-def split_options(options):
-    style_options = {}
-    page_options = {}
+from models.styles import (
+    Font,
+    BookletStyle,
+    PageStyle,
+)
 
-    for name,value in options.items():
-        if name in STYLE_PARAMETERS:
-            style_options[name] = value
-        else:
-            page_options[name] = value
+from pages.factory import PageFactory
+from pages import daily
+from pages import calendar
+from pages import lines
 
-    return style_options, page_options
+def convert_value(value, expected_type):
+
+    if value is None:
+        return None
+
+    # Handle int | None, str | None, etc.
+    origin = get_origin(expected_type)
+
+    if origin in (Union, UnionType):
+
+        possible_types = [
+            t for t in get_args(expected_type)
+            if t is not type(None)
+        ]
+
+        if len(possible_types) == 1:
+            expected_type = possible_types[0]
+
+    if isinstance(value, expected_type):
+        return value
+
+    if expected_type is bool:
+
+        if isinstance(value, str):
+            value = value.strip().lower()
+
+            if value in ("true", "1", "yes", "on"):
+                return True
+
+            if value in ("false", "0", "no", "off"):
+                return False
+
+            raise ValueError(
+                f"Invalid boolean value: {value}"
+            )
+
+        return bool(value)
+
+    try:
+        return expected_type(value)
+
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Cannot convert {value!r} "
+            f"to {expected_type}"
+        ) from exc
+
+
+def OLDconvert_value(value, expected_type):
+    """Convert a configuration value to the expected Python type."""
+
+    # Handle Optional[T] / T | None
+    origin = get_origin(expected_type)
+
+    if origin is Union or origin is type(None):
+        types = [t for t in get_args(expected_type) if t is not type(None)]
+
+        if value is None or value == "":
+            return None
+
+        if len(types) == 1:
+            return convert_value(value, types[0])
+
+    # Already the correct type
+    if isinstance(value, expected_type):
+        return value
+
+    # Boolean needs special handling
+    if expected_type is bool:
+        if isinstance(value, str):
+            value = value.lower()
+
+            if value in ("true", "1", "yes", "on"):
+                return True
+
+            if value in ("false", "0", "no", "off"):
+                return False
+
+            raise ValueError(f"Invalid boolean value: {value}")
+
+        return bool(value)
+
+    # Standard conversions: int, str, float, etc.
+    try:
+        return expected_type(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Cannot convert {value!r} to {expected_type}"
+        ) from exc
 
 def set_nested_value(obj, path, value):
+    """Set a value on an object using a dotted attribute path."""
     target = obj
 
     for attribute in path[:-1]:
@@ -31,86 +120,276 @@ def set_nested_value(obj, path, value):
 
     setattr(target, path[-1], value)
 
-def convert_value(value, expected_type):
-    if isinstance(value, expected_type):
-        return value
 
-    return expected_type(value)
+from dataclasses import fields, is_dataclass
+from typing import get_type_hints, get_origin, get_args, Union
 
-PAGE_STYLE_OPTIONS = {
-    "font.name":  (("font", "name"), str),
-    "font.size":  (("font", "size"), int),
-    "font.color": (("font", "color"), str),
-    "file": ("file", str),
-    "shownumber": ("shownumber", int),
-}
 
-def build_page_style(options):
-    style = PageStyle()
+def apply_options(obj, options):
+    """
+    Apply recognized options to a dataclass object.
 
-    for name, value in options.items():
-        definition = PAGE_STYLE_OPTIONS.get(name)
-        print ("bps-------", name, value, definition)
+    Options use dotted names for nested attributes, for example:
 
-        if definition is None:
-            raise ValueError(f"Unknown booklet style option: {name}")
-        path, expected_type = definition
-        value = convert_value(value, expected_type)
-        set_nested_value(style, path, value)
+        font.size=10
+        font.color=blue
 
-    return style
+    Returns a dictionary containing options that were not
+    recognized by this object.
+    """
 
-BOOKLET_STYLE_OPTIONS = {
-    "font.name":  (("font", "name"), str),
-    "font.size":  (("font", "size"), int),
-    "font.color": (("font", "color"), str),
-    "border":     (("border",), int),
-}
-
-def build_booklet_style(options):
-    style = BookletStyle()
+    remaining = {}
 
     for name, value in options.items():
-        definition = BOOKLET_STYLE_OPTIONS.get(name)
 
-        if definition is None:
-            raise ValueError(f"Unknown booklet style option: {name}")
-        path, expected_type = definition
-        value = convert_value(value, expected_type)
-        set_nested_value(style, path, value)
+        path = name.split(".")
+        current = obj
 
-    return style
+        try:
+            # Walk through all but the final attribute.
+            for attribute in path[:-1]:
+                current = getattr(current, attribute)
 
-def build_configuration(booklet_definition):
+            final_attribute = path[-1]
 
-    # for entry in booklet_definition:
-    #     print (entry)
-    # print ("="*40)
+            # Does the final attribute actually exist?
+            if not hasattr(current, final_attribute):
+                remaining[name] = value
+                continue
 
+            # Get the declared type from the class containing
+            # the final attribute.
+            type_hints = get_type_hints(current.__class__)
+
+            if final_attribute not in type_hints:
+                remaining[name] = value
+                continue
+
+            expected_type = type_hints[final_attribute]
+
+            converted_value = convert_value(
+                value,
+                expected_type
+            )
+
+            setattr(
+                current,
+                final_attribute,
+                converted_value
+            )
+
+        except AttributeError:
+            remaining[name] = value
+
+    return remaining
+
+
+
+# def apply_options(obj, options):
+#     """
+#     Apply recognized options to a dataclass object.
+
+#     Returns:
+#         dict: Options that were not recognized by the object.
+#     """
+
+#     remaining = {}
+
+#     for name, value in options.items():
+
+#         path = name.split(".")
+#         current = obj
+
+#         try:
+#             # Walk down the path and determine whether it exists.
+#             for attribute in path[:-1]:
+#                 current = getattr(current, attribute)
+
+#             final_attribute = path[-1]
+
+#             # Make sure the final attribute exists.
+#             if not hasattr(current, final_attribute):
+#                 remaining[name] = value
+#                 continue
+
+#             # Get type information from the actual class.
+#             type_hints = get_type_hints(type(current))
+
+#             if final_attribute not in type_hints:
+#                 remaining[name] = value
+#                 continue
+
+#             expected_type = type_hints[final_attribute]
+
+#             converted_value = convert_value(
+#                 value,
+#                 expected_type
+#             )
+
+#             set_nested_value(
+#                 obj,
+#                 path,
+#                 converted_value
+#             )
+
+#         except AttributeError:
+#             remaining[name] = value
+
+#     return remaining
+
+# def build_configuration(booklet_definition):
+
+#     pages = []
+
+#     booklet_style = BookletStyle()
+#     booklet_config = BookletConfig(pages=pages)
+
+#     for entry in booklet_definition:
+
+#         if entry.page_type == "booklet":
+
+#             # First: try presentation options
+#             remaining = apply_options(
+#                 booklet_style,
+#                 entry.options
+#             )
+
+#             # Then: try booklet configuration options
+#             remaining = apply_options(
+#                 booklet_config,
+#                 remaining
+#             )
+
+#             if remaining:
+#                 raise ValueError(
+#                     f"Unknown booklet options: "
+#                     f"{', '.join(remaining)}"
+#                 )
+
+#         else:
+
+#             # Start with default page style
+#             page_style = PageStyle()
+
+#             # Apply presentation options
+#             remaining = apply_options(
+#                 page_style,
+#                 entry.options
+#             )
+
+#             detail_class = PageFactory.get_detail_class(entry.page_type)
+
+#             if detail_class is not None:
+#                 page_detail = detail_class()
+
+#                 remaining = apply_options(
+#                     page_detail,
+#                     remaining
+#                 )
+#             else:
+#                 page_detail = None
+
+#             # Create page configuration
+#             page_config = PageConfig(
+#                 page_type=entry.page_type,
+#                 style=page_style,
+#                 text=entry.text
+#             )
+
+#             # Apply page configuration options
+#             remaining = apply_options(
+#                 page_config,
+#                 remaining
+#             )
+
+#             if remaining:
+#                 raise ValueError(
+#                     f"Unknown options for page "
+#                     f"{entry.page_type}: "
+#                     f"{', '.join(remaining)}"
+#                 )
+
+#             pages.append(page_config)
+
+#     print (booklet_config)
+#     return booklet_config
+
+def build_configuration(definitions):
     pages = []
-    for entry in booklet_definition:
-        if entry.page_type == "booklet":
-            booklet_style_opts, booklet_config_opts = split_options(entry.options)
-            
-            # print (f"BOOKLET STYLE {booklet_style_opts}")
-            # print (f"BOOKLET CONFIG {booklet_config_opts}")
-            # resolve_booklet_config(cfgBooklet, booklet_config_opts)
-            # print (cfgBooklet["format"])
-        else: # this is a page
-            page_style_options, page_config_options = split_options(entry.options)
-            print (page_style_options, page_config_options)
-            # print ("page")
-            # build the page style
-            page_style = build_page_style(page_style_options)
 
-            # buld the page config
-            page_config = PageConfig(page_type=entry.page_type, style=page_style, text=entry.text, **page_config_options)
-            # add it to the pages
-            pages.append (page_config)
+    booklet_style = BookletStyle()
+    booklet_config = BookletConfig(pages=pages)
+
+    for entry in definitions:
+
+        # ---------------------------------
+        # Booklet options
+        # ---------------------------------
+        if entry.page_type == "booklet":
+
+            remaining = apply_options(
+                booklet_style,
+                entry.options
+            )
+
+            remaining = apply_options(
+                booklet_config,
+                remaining
+            )
+
+            if remaining:
+                raise ValueError(
+                    f"Unknown booklet options: {remaining}"
+                )
+
             continue
 
-    styleBooklet = build_booklet_style(booklet_style_opts)
-    cfgBooklet = BookletConfig(pages=pages, style=styleBooklet, **booklet_config_opts)
+        # ---------------------------------
+        # Page style
+        # ---------------------------------
+        page_style = PageStyle()
 
-    print (cfgBooklet)
-    return cfgBooklet
+        remaining = apply_options(
+            page_style,
+            entry.options
+        )
+
+        # ---------------------------------
+        # Page-specific detail
+        # ---------------------------------
+        page_detail = PageFactory.create_detail(
+            entry.page_type
+        )
+
+        if page_detail is not None:
+
+            remaining = apply_options(
+                page_detail,
+                remaining
+            )
+
+        # ---------------------------------
+        # Generic page configuration
+        # ---------------------------------
+        page_config = PageConfig(
+            page_type=entry.page_type,
+            style=page_style,
+            text=entry.text,
+            detail=page_detail
+        )
+
+        remaining = apply_options(
+            page_config,
+            remaining
+        )
+
+        if remaining:
+            raise ValueError(
+                f"Unknown options for page "
+                f"'{entry.page_type}': {remaining}"
+            )
+
+        pages.append(page_config)
+
+    print (booklet_config)
+    return booklet_config

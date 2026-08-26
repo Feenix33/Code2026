@@ -11,6 +11,7 @@ class PageConfig:
     style: PageStyle | None = None
     text: list[str] = field(default_factory=list)
     file: str = None
+    detail: object | None = None
 
 
 @dataclass
@@ -23,11 +24,17 @@ class BookletConfig:
     def __str__(self) -> str:
         rtn = f"BOOKLET CONFIG\n"
         rtn += f"format={self.format} output={self.output}\n"
+        n = 1
         for page in self.pages:
-            rtn += f"pg({page.page_type}): "
+            rtn += f"{n} {page.page_type.upper()}: "
             rtn += f"{page.style}  text_len={len(page.text)}"
             rtn += "\n"
+            n += 1
         return rtn
+
+
+
+
 
 
 
