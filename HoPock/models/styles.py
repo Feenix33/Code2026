@@ -13,6 +13,13 @@ class Font:
     color: str | None = None
 
 @dataclass
+class Line:
+    color: str = "black"
+    width: float = 1.0
+    dash: int = 0  # 10s = on 1s = off
+
+
+@dataclass
 class BookletStyle:
     # Booklet parameters that should be global and not overriden by pages
     border: int = 10

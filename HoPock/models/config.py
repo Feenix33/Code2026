@@ -4,6 +4,7 @@ The definition get mapped into config classes
 """
 from dataclasses import dataclass, field
 from models.styles import BookletStyle, PageStyle
+from reportlab.lib.pagesizes import letter, landscape
 
 @dataclass
 class PageConfig:
@@ -18,12 +19,15 @@ class PageConfig:
 class BookletConfig:
     pages: list[PageConfig]
     style: BookletStyle = field(default_factory=BookletStyle)
-    format: int = 8
+    panels: int = 8
     output: str = "pocket.pdf"
+    pagesize: tuple [float, float] = letter
+    margin: int = 10
+
 
     def __str__(self) -> str:
-        rtn = f"BOOKLET CONFIG\n"
-        rtn += f"format={self.format} output={self.output}\n"
+        rtn = f"\nBOOKLET CONFIG\n" + "-"*40 + '\n'
+        rtn += f"panels={self.panels} output={self.output}\n"
         n = 1
         for page in self.pages:
             rtn += f"{n} {page.page_type.upper()}: "
