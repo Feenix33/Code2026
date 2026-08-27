@@ -7,3 +7,8 @@ from dataclasses import dataclass, field
 class Point:
     x: float
     y: float
+
+@dataclass
+class Dim:
+    h: float
+    w: float

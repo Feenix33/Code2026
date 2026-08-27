@@ -45,8 +45,8 @@ def main():
     # 3. Build the PDF
     # print(f"Building your booklet from '{args.manifest}'...")
     engine = BookletEngine(cfgBooklet)
-    # # engine.build()
-    # print(f"Success! Saved to {args.output}")
+    engine.build()
+
     logger.debug ('Fini')
 
 def setup_logging():

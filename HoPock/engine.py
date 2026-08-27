@@ -3,10 +3,14 @@ This ties your processors and generators together and compiles the final pages i
 """
 from dataclasses import dataclass, field
 from models.config import BookletConfig, PageConfig
+from models.styles import *
 from models.data_classes import *
+from pages.factory import PageFactory
+
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.pdfgen.canvas import Canvas
 
 import logging
-
 logger = logging.getLogger(__name__)
 
 """
@@ -58,22 +62,42 @@ class BookletEngine:
         logger.debug ("Engine created ")
         logger.debug (f"panels {self.cfg.panels}")
 
+        self.panel_dim = self._define_panel_dim()
         self.panels = self._define_panels()
-        for p in self.panels:
-            print (p)
+        self.panel_num = 0
 
+        self.canvas = Canvas(self.cfg.outfile, pagesize=self.cfg.pagesize)
+        logger.debug(f"Output to {self.cfg.outfile}")
+
+
+    def _define_panel_dim(self):
+        # compute the size of a panel 
+        width, height = self.cfg.pagesize
+        margin = self.cfg.margin
+        if self.cfg.panels == 8:
+            fWidth = (width / 4) - margin * 2
+            fHeight = (height / 2) - margin * 2
+            dim = Dim (h=fHeight, w=fWidth)
+        else:
+            logger.debug("Other panel counts not immplemented")
+            dim = Dim (0, 0)
+        return dim
 
     def _define_panels(self):
         """
         Compute the panel corners and rotations
-        Currently hardcoded for the panelss
+        Currently hardcoded 
         """
-        width, height = self.cfg.pagesize
+        # width, height = self.cfg.pagesize
         margin = self.cfg.margin
+        fWidth, fHeight = self.panel_dim.w, self.panel_dim.h
+
+        if fWidth < 1 or fHeight < 1:
+            logger.debug("Panel dimension not set")
 
         if self.cfg.panels == 8:
-            fWidth = (width / 4) - margin * 2
-            fHeight = (height / 2) - margin * 2
+            # fWidth = (width / 4) - margin * 2
+            # fHeight = (height / 2) - margin * 2
 
             f0 = Point(0 * fWidth + 1 * margin, 0 * fHeight + 1 * margin)
             f1 = Point(1 * fWidth + 3 * margin, 0 * fHeight + 1 * margin)
@@ -88,9 +112,37 @@ class BookletEngine:
         panels = []
         for c, r in zip(corners, rotate):
             panels.append(Panel(c, r))
+
+        # print (f"fwh = {fWidth} {fHeight}")
+        # print (f"doc = {width} {height}")
+        # print (f"mul = {4*fWidth} {2*fHeight}")
+        # print (f"mgn = {margin}")
         return panels
 
         
     def build(self):
-        compiled_pages = []
-        print(f"DEBUG: Assembling {len(compiled_pages)} pages into {self.output_name}")
+        for pgcfg in self.cfg.pages:
+            page = PageFactory.create(pgcfg, self.cfg.style)
+            # config: PageConfig, booklet_style: BookletStyle):
+            corner = self.panels[self.panel_num].corner
+            rotate = self.panels[self.panel_num].rotate
+            page.render(self.canvas, corner, rotate, self.panel_dim)
+            # canvas, corner, rotate, dim):
+            self.panel_num += 1
+
+        logger.debug ("showPage()")
+        self.canvas.showPage()
+        self.canvas.save()
+        
+        """
+        Need to move to this structure eventually 
+            
+        for page_config in self.config.pages:
+        page = PageFactory.create(page_config)
+
+        while not page.finished:
+            page.render_next(canvas)
+            self.next_page(canvas)
+        """
+
+        pass

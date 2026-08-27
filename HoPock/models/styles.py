@@ -15,7 +15,7 @@ class Font:
 @dataclass
 class Line:
     color: str = "black"
-    width: float = 1.0
+    width: int = 1
     dash: int = 0  # 10s = on 1s = off
 
 
@@ -30,6 +30,11 @@ class BookletStyle:
         size = 8,
         color = "black"
     ))
+
+    frame: Line = field(default_factory=lambda: Line(
+        color = "red"
+    ))
+    showframe: bool = False
     showpage: int = 0   # show page number or not (for testing)
 
 
@@ -37,5 +42,8 @@ class BookletStyle:
 class PageStyle:
     # All these fields should be in the Booklet Style class 
     font: Font = field(default_factory=Font)   # override font for this page
+    frame: Line = field(default_factory=Font)   # override font for this page
+
+    showframe: bool = False
     showpage: int = 0   # show page number or not (for testing)
 

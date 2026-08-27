@@ -40,9 +40,14 @@ class PageFactory:
         return cls._pages[name]["detail_class"]
 
     @classmethod
-    def create(cls, name, config):
-        page_class = cls.get_page_class(name)
-        return page_class(config)
+    def create(cls, page_config, booklet_style):
+        page_type = page_config.page_type
+        page_class = cls.get_page_class(page_type)
+        if page_class is None:
+            raise ValueError(
+                f"Unknown page type: {config.page_type}"
+            )
+        return page_class(page_config, booklet_style)
 
     @classmethod
     def create_detail(cls, name):

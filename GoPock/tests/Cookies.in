@@ -3,10 +3,10 @@ book {
      addPages=True
      useRecipeAbbreviations=True
 }
-recipe ./tests/cChocoChip.txt
 title title="Cookies"
-recipe ./tests/cLemon.txt
-recipe ./tests/cOatmeal.txt
-recipe ./tests/CooPeppermint.txt
-recipe ./tests/cPButterChoco.txt
-recipe ./tests/cTwoChipChoco.txt
+recipe cOatmeal.txt
+recipe cChocoChip.txt
+#recipe cLemon.txt
+#recipe ./tests/CooPeppermint.txt
+recipe cPButterChoco.txt
+#recipe ./tests/cTwoChipChoco.txt
