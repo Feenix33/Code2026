@@ -8,7 +8,8 @@ class Point:
     x: float
     y: float
 
-@dataclass
-class Dim:
-    h: float
-    w: float
+# kill this and use point
+# @dataclass
+# class Dim:
+#     h: float
+#     w: float

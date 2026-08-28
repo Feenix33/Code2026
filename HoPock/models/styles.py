@@ -35,15 +35,15 @@ class BookletStyle:
         color = "red"
     ))
     showframe: bool = False
-    showpage: int = 0   # show page number or not (for testing)
+    showpage: bool = False   # show page number or not (for testing)
 
 
 @dataclass
 class PageStyle:
     # All these fields should be in the Booklet Style class 
     font: Font = field(default_factory=Font)   # override font for this page
-    frame: Line = field(default_factory=Font)   # override font for this page
+    frame: Line = field(default_factory=Line)   # override font for this page
 
-    showframe: bool = False
-    showpage: int = 0   # show page number or not (for testing)
+    showframe: bool = None
+    showpage: bool = None  # show page number or not (for testing)
 

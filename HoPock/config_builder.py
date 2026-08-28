@@ -146,7 +146,7 @@ def build_configuration(definitions):
     pages = []
 
     booklet_style = BookletStyle()
-    booklet_config = BookletConfig(pages=pages)
+    booklet_config = BookletConfig(pages=pages, style=booklet_style)
 
     for entry in definitions:
 

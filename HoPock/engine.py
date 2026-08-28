@@ -77,10 +77,10 @@ class BookletEngine:
         if self.cfg.panels == 8:
             fWidth = (width / 4) - margin * 2
             fHeight = (height / 2) - margin * 2
-            dim = Dim (h=fHeight, w=fWidth)
+            dim = Point (y=fHeight, x=fWidth)
         else:
             logger.debug("Other panel counts not immplemented")
-            dim = Dim (0, 0)
+            dim = Point (0, 0)
         return dim
 
     def _define_panels(self):
@@ -90,7 +90,7 @@ class BookletEngine:
         """
         # width, height = self.cfg.pagesize
         margin = self.cfg.margin
-        fWidth, fHeight = self.panel_dim.w, self.panel_dim.h
+        fWidth, fHeight = self.panel_dim.x, self.panel_dim.y
 
         if fWidth < 1 or fHeight < 1:
             logger.debug("Panel dimension not set")
