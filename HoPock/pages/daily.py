@@ -19,7 +19,7 @@ class DailyPage(Page):
         # logger.debug ("Detail")
         # logger.debug (self.config.detail)
 
-    def render(self):
+    def draw(self):
 
         detail = self.config.detail
         logger.debug ("Rendering a daily")

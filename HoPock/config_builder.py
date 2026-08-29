@@ -219,5 +219,7 @@ def build_configuration(definitions):
 
         pages.append(page_config)
 
-    logger.debug (booklet_config)
+    # from pprint import pprint
+    # pprint(booklet_config, indent=2, depth=4, compact=True)
+    # logger.debug (booklet_config)
     return booklet_config
