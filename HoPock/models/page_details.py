@@ -10,7 +10,13 @@ class LinesPageDetail:
 class GridPageDetail:
     spacing: float = 0.25  # inches for the grid and make them square
     grid: Point = field(default_factory=lambda: Point(0.0, 0.0)) # override the spacing, if one is 0, then use spacing
-    
+
+
+@dataclass
+class TextPageDetail:
+    # file: str = None # filename where the text is at
+    spacer: bool = True  # temp debug flag control
+
 @dataclass
 class DailyPageDetail:
     start: str = "8:00"

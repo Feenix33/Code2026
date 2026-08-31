@@ -85,3 +85,17 @@ def test_ascii_processor_reads_text():
     # 3. Assert (verify) that the outcome matches what you expect
     assert "ASCII Text Layer:" in result
 
+
+Setup
+-----
+
+Create and activate a virtual environment, then install the project requirements:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+This project depends on both pytest and reportlab. The root-level `processors.py` file must not exist alongside the `processors/` package, or Python will import the wrong module and raise the `ModuleNotFoundError` you saw.
+
