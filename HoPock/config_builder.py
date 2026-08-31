@@ -17,10 +17,13 @@ from models.styles import (
     PageStyle,
 )
 
+from models.data_classes import Point
+
 from pages.factory import PageFactory
 from pages import daily
 from pages import calendar
 from pages import lines
+from pages import grid
 
 import logging
 logger = logging.getLogger(__name__)
