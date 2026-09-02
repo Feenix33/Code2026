@@ -4,7 +4,7 @@ Translates the p8 files into the booklet config file and styles
 from dataclasses import fields, is_dataclass
 from types import UnionType
 from typing import get_type_hints, get_origin, get_args, Union
-
+from pathlib import Path
 
 from models.config import (
     PageConfig,
@@ -30,6 +30,25 @@ from pages import (
 
 import logging
 logger = logging.getLogger(__name__)
+
+def resolve_file_path(data_dir, filename):
+    """Resolve a page file against the booklet data directory."""
+
+    if filename is None:
+        return None
+
+    path = Path(filename)
+
+    # Absolute paths are always used as-is.
+    if path.is_absolute():
+        return path
+
+    # If there is a booklet data directory, prepend it.
+    if data_dir is not None:
+        return Path(data_dir) / path
+
+    # Otherwise leave the relative path alone.
+    return path
 
 def convert_value(value, expected_type):
 
@@ -223,9 +242,25 @@ def build_configuration(definitions):
                 f"'{entry.page_type}': {remaining}"
             )
 
+        page_config = finalize_page_config(
+            page_config,
+            booklet_config
+        )
         pages.append(page_config)
 
     # from pprint import pprint
     # pprint(booklet_config, indent=2, depth=4, compact=True)
     # logger.debug (booklet_config)
     return booklet_config
+
+
+def finalize_page_config(page_config, booklet_config):
+    """Resolve page-level values that depend on booklet configuration."""
+
+    if page_config.file is not None:
+        page_config.file = resolve_file_path(
+            booklet_config.data_dir,
+            page_config.file
+        )
+
+    return page_config

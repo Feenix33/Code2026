@@ -7,7 +7,7 @@ from conftest import RecordingCanvas
 
 
 class StubPage(Page):
-    def draw(self):
+    def draw(self, resume=False):
         self.draw_called = True
 
 

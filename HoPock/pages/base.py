@@ -4,6 +4,7 @@ from models.config import PageConfig
 from models.styles import *
 from models.data_classes import *
 from models.resolver import resolve_page_style
+from models.reportlab_styles import *
 from pages.factory import PageFactory
 
 import logging
@@ -24,6 +25,7 @@ class Page(ABC):
         ) 
         self.detail = config.detail
         self.leading = None
+        # self.rl_styles = ReportLabStyles(self.style)
 
     def _render_start(self):
         self.canvas.saveState()
@@ -63,14 +65,15 @@ class Page(ABC):
         self.leading = self.canvas._leading
 
     def _set_font_title(self):
-        self._set_font(self.style.titlefont)
+        font = self.style.titlestyle.font
+        self._set_font(font)
 
     def _draw_title(self, title_str=None, ypos=None):
         self.canvas.saveState()
         self._set_font_title()
         x = self.mid.x
         y = ypos if ypos is not None else self.max.y - self.leading
-        title = title_str if title_str is not None else self.config.title
+        title = title_str if title_str is not None else self.config.titletext
         if title:
             self.canvas.drawCentredString(x, y, title)
             y -= self.leading
@@ -84,16 +87,16 @@ class Page(ABC):
     # Drawing routines
     # =======================================================
     @abstractmethod
-    def draw(self):
+    def draw(self, resume=False):
         pass
 
-    def render(self, canvas, corner, rotate, dim):
+    def render(self, canvas, corner, rotate, dim, resume=False):
+        # resume means we are continuing a previous render that was not completed
         self.canvas = canvas # draw on this canvas
         self.rotate = rotate # need to rotate 
         self.corner = corner # panel corner
         self.max = dim
         self.mid = Point(x=self.max.x/2, y=self.max.y/2)
-        logger.debug("BLANK render()")
 
         # move to the proper panel area
         self._render_start()
@@ -107,8 +110,12 @@ class Page(ABC):
         self._set_font()
         self._set_Line_format_default()
 
-        self.draw()
+        rtn = self.draw(resume=resume) # draw the page content
+        rtn = True if rtn is None else rtn # assume all processing complete if not specified
         self._render_end()
+        return rtn # all processing complete
+
+    
 
 
 
@@ -117,7 +124,7 @@ class BlankPage(Page):
     def __init__(self, config, booklet_style):
         super().__init__(config, booklet_style)
 
-    def draw(self):
+    def draw(self, resume=False):
         ypos = None
-        if self.config.title:
+        if self.config.titletext:
             ypos = self._draw_title()

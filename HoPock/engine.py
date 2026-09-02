@@ -124,25 +124,20 @@ class BookletEngine:
         for pgcfg in self.cfg.pages:
             page = PageFactory.create(pgcfg, self.cfg.style)
             # config: PageConfig, booklet_style: BookletStyle):
-            corner = self.panels[self.panel_num].corner
-            rotate = self.panels[self.panel_num].rotate
-            page.render(self.canvas, corner, rotate, self.panel_dim)
-            # canvas, corner, rotate, dim):
-            self.panel_num += 1
+            # corner = self.panels[self.panel_num].corner
+            # rotate = self.panels[self.panel_num].rotate
+            result = False
+            resume = False
+            while not result: # keep rendering until the page is complete
+                corner = self.panels[self.panel_num].corner
+                rotate = self.panels[self.panel_num].rotate
+                result = page.render(self.canvas, corner, rotate, self.panel_dim, resume=resume)
+                resume = True
+                self.panel_num = (self.panel_num + 1) % self.cfg.panels
+                if self.panel_num == 0: # we had a rollover 
+                    self.canvas.showPage() # start a new page
 
-        logger.debug ("showPage()")
-        self.canvas.showPage()
+        # logger.debug ("showPage()")
+        if self.panel_num != 0: # we had a rollover 
+            self.canvas.showPage() # start a new page
         self.canvas.save()
-        
-        """
-        Need to move to this structure eventually 
-            
-        for page_config in self.config.pages:
-        page = PageFactory.create(page_config)
-
-        while not page.finished:
-            page.render_next(canvas)
-            self.next_page(canvas)
-        """
-
-        pass

@@ -17,8 +17,8 @@ class LinesPage(Page):
         self.spacing = self.detail.spacing * inch
         logger.debug(f"{self.detail.spacing}=>{self.spacing}")
 
-    def draw(self):
-        if self.config.title:
+    def draw(self, resume=False):
+        if self.config.titletext:
             ypos = self._draw_title() - self.spacing
         else:
             ypos = self.max.y - self.spacing
