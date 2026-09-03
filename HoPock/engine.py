@@ -132,7 +132,10 @@ class BookletEngine:
                 corner = self.panels[self.panel_num].corner
                 rotate = self.panels[self.panel_num].rotate
                 result = page.render(self.canvas, corner, rotate, self.panel_dim, resume=resume)
-                resume = True
+                if self.cfg.addpages and not result: # if the page is not complete, add a new page
+                    resume = True
+                else:
+                    result = True # exit the loop if the page is complete or addpages is False
                 self.panel_num = (self.panel_num + 1) % self.cfg.panels
                 if self.panel_num == 0: # we had a rollover 
                     self.canvas.showPage() # start a new page

@@ -31,6 +31,7 @@ class BookletConfig:
     pagesize: tuple [float, float] = landscape(letter)
     margin: int = 10  # margin around all the frames. for 8 panel, there are 8 horiz and 4 vertical
     data_dir: str | None = None  # directory for data files
+    addpages: bool = True  # add pages if a processor needs more space
 
 
 
