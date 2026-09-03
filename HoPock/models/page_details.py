@@ -19,6 +19,11 @@ class TextPageDetail:
     firstline: bool = False # if true, then the first line is a title
 
 @dataclass
+class MarkdownPageDetail:
+    bogus: bool = False # placeholder
+
+    
+@dataclass
 class DailyPageDetail:
     start: str = "8:00"
     end: str = "17:00"

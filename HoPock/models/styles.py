@@ -43,22 +43,26 @@ class BookletStyle:
     ))
     
     # --- Styles ---
-    titlestyle: TextStyle = field(default_factory=lambda: TextStyle(
+    title: TextStyle = field(default_factory=lambda: TextStyle(
         name = "TitleStyle",
         font = Font(name = "Helvetica", size = 13, color = "orange"),
         alignment = "center",
         leading = 14, space_after = 12, space_before = 0
     ))
-    bodystyle: TextStyle = field(default_factory=lambda: TextStyle(
+    body: TextStyle = field(default_factory=lambda: TextStyle(
         name = "BodyStyle",
         font = Font(name = "Helvetica", size = 8, color = "black"),
-        alignment = "left",
-        leading = 10, space_after = 0, space_before = 0
+        alignment = "left", leading = 10, space_after = 10, space_before = 0
     ))
-    headingstyle: TextStyle = field(default_factory=lambda: TextStyle(
+    heading1: TextStyle = field(default_factory=lambda: TextStyle(
         name = "HeadingStyle",
         font = Font(name = "Helvetica", size = 12, color = "black"),
-        alignment = "left",
+        alignment = "left", leading = 10, space_after = 10, space_before = 0
+    ))
+    heading2: TextStyle = field(default_factory=lambda: TextStyle(
+        name = "HeadingStyle",
+        font = Font(name = "Helvetica", size = 11, color = "blue"),
+        alignment = "left", leading = 10, space_after = 10, space_before = 0
     ))
 
     # generic line for most drawing
@@ -80,9 +84,10 @@ class PageStyle:
     line: Line = field(default_factory=Line)   # general line
     frame: Line = field(default_factory=Line)   # frame line
 
-    titlestyle: TextStyle = field(default_factory=TextStyle)   # page title font
-    bodystyle: TextStyle = field(default_factory=TextStyle)   # page body font
-    headingstyle: TextStyle = field(default_factory=TextStyle)   # page body font
+    title: TextStyle = field(default_factory=TextStyle)   # page title font
+    body: TextStyle = field(default_factory=TextStyle)   # page body font
+    heading1: TextStyle = field(default_factory=TextStyle)   # page body font
+    heading2: TextStyle = field(default_factory=TextStyle)   # page body font
 
     margin: int = None # margin 
     showframe: bool = None # show the frame

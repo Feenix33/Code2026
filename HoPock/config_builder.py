@@ -26,6 +26,7 @@ from pages import (
     lines,
     grid,
     text,
+    markdown,
 )
 
 import logging

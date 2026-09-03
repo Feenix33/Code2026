@@ -4,7 +4,7 @@ from models.config import PageConfig
 from models.styles import *
 from models.data_classes import *
 from models.resolver import resolve_page_style
-from models.reportlab_styles import *
+# from models.reportlab_styles import *
 from pages.factory import PageFactory
 
 import logging
@@ -79,7 +79,7 @@ class Page(ABC):
         self.leading = self.canvas._leading
 
     def _set_font_title(self):
-        font = self.style.titlestyle.font
+        font = self.style.title.font
         self._set_font(font)
 
     def _draw_title(self, title_str=None, ypos=None):
