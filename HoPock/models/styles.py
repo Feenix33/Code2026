@@ -45,15 +45,20 @@ class BookletStyle:
     # --- Styles ---
     titlestyle: TextStyle = field(default_factory=lambda: TextStyle(
         name = "TitleStyle",
-        font = Font(name = "Helvetica", size = 12, color = "green"),
+        font = Font(name = "Helvetica", size = 13, color = "orange"),
         alignment = "center",
-        leading = 14
+        leading = 14, space_after = 12, space_before = 0
     ))
     bodystyle: TextStyle = field(default_factory=lambda: TextStyle(
         name = "BodyStyle",
         font = Font(name = "Helvetica", size = 8, color = "black"),
         alignment = "left",
-        leading = 10, space_after = 2, space_before = 2
+        leading = 10, space_after = 0, space_before = 0
+    ))
+    headingstyle: TextStyle = field(default_factory=lambda: TextStyle(
+        name = "HeadingStyle",
+        font = Font(name = "Helvetica", size = 12, color = "black"),
+        alignment = "left",
     ))
 
     # generic line for most drawing
@@ -77,6 +82,7 @@ class PageStyle:
 
     titlestyle: TextStyle = field(default_factory=TextStyle)   # page title font
     bodystyle: TextStyle = field(default_factory=TextStyle)   # page body font
+    headingstyle: TextStyle = field(default_factory=TextStyle)   # page body font
 
     margin: int = None # margin 
     showframe: bool = None # show the frame

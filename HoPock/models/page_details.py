@@ -14,8 +14,9 @@ class GridPageDetail:
 
 @dataclass
 class TextPageDetail:
-    # file: str = None # filename where the text is at
-    spacer: bool = True  # temp debug flag control
+    spacer: bool = False  # put space between lines
+    blanks: bool = False # if a line is blank, add a blank line between lines
+    firstline: bool = False # if true, then the first line is a title
 
 @dataclass
 class DailyPageDetail:
