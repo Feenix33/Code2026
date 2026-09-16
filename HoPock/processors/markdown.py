@@ -8,12 +8,20 @@ Handled commands:
 + bullet list
 1 numbered list
 ''' code block
+> Indent block
 
 *italics* _italics_
 **bold** __bold__
 **_bold italic_**
 ~~strikethrough~~
 
+Notes:
+The heading command goes to the end of the line
+Regular text keeps pulling lines until there are two CR. If there is one, then they text lines are part of the same paragraph
+Code block symbol at the beginning and end of a line, each CR is a 'paragraph'
+Potential alternative is [links] could be rendered underlined
+Appears that combining text into a paragraph also is for bullets. To end a bullet need the next bullet or two CR (i.e. blank line)
+Multiple blank line CRs are joined in the output. Blank line rendered as space between paras
 """
 from processors.base import Processor
 from collections import deque

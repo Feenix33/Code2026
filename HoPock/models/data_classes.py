@@ -8,8 +8,9 @@ class Point:
     x: float
     y: float
 
-# kill this and use point
-# @dataclass
-# class Dim:
-#     h: float
-#     w: float
+@dataclass
+class Token:
+    kind: Literal["command", "text"]
+    name: str | None    # eg H1 BP
+    args: list[str]     # command parameters
+    text: str | None    # Raw text if kind == text

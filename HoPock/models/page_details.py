@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 # from models.styles import BookletStyle, PageStyle
-from models.data_classes import Point
+from models.data_classes import Point, Token
 
 @dataclass
 class LinesPageDetail:
@@ -22,7 +22,10 @@ class TextPageDetail:
 class MarkdownPageDetail:
     bogus: bool = False # placeholder
 
-    
+@dataclass
+class RoffPageDetail:
+    bogus: bool = False # placeholder
+
 @dataclass
 class DailyPageDetail:
     start: str = "8:00"
