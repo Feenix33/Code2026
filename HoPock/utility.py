@@ -37,7 +37,9 @@ def OLDstring_to_args(arg_str):
             
     return kwargs
 
-
+"""
+Converted the above to the below to handle commas or no commas
+"""
 def string_to_args(arg_str):
     """Convert whitespace- or comma-separated key/value pairs to a dict."""
     if not arg_str or not arg_str.strip():

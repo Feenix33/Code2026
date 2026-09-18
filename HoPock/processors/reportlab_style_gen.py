@@ -6,6 +6,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Frame, Paragraph, Spacer #, PageBreak
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
 
+from models.styles import Marker
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,11 @@ REPORTLAB_FONT_PROPERTIES = {
     "space.after": "spaceAfter",
     "space.before": "spaceBefore",
     "alignment": "alignment",
+    "bulletfontname": "bulletFontName",
+    "bulletfontsize": "bulletFontSize",
+    "bulletindent": "bulletIndent",
+    "bulletcolor": "bulletColor",
+    "first_line_indent": "firstLineIndent"
 }
 
 
@@ -134,7 +141,13 @@ class ReportLabStyleProvider:
                 (text_style.alignment or "left").lower(),
                 TA_LEFT
             ),
+            "bulletFontName": text_style.bulletfontname or "Helvetica", 
+            "bulletFontSize": text_style.bulletfontsize or 8, 
+            "bulletIndent": (text_style.bulletindent if text_style.bulletindent is not None else 0), 
+            "bulletColor": text_style.bulletcolor or "black",
+            "firstLineIndent": (text_style.first_line_indent if text_style.first_line_indent is not None else 0),
         }
+
 
         properties.update(overrides)
 
@@ -188,6 +201,18 @@ class ReportLabStyleProvider:
             if reportlab_name is None:
                 raise ValueError(f"Unknown style option: {name}")
 
+            if name == "alignment" and isinstance(value, str):
+                alignment_values = {
+                    "left": TA_LEFT,
+                    "center": TA_CENTER,
+                    "right": TA_RIGHT,
+                    "justify": TA_JUSTIFY,
+                }
+                try:
+                    value = alignment_values[value.lower()]
+                except KeyError as error:
+                    raise ValueError(f"Unknown alignment: {value}") from error
+
             properties[reportlab_name] = value
 
         if "font.size" in options and "leading" not in options:
@@ -199,3 +224,72 @@ class ReportLabStyleProvider:
             name=f"{base_style.name}_variant",
             **properties
         )
+
+    # def get_marker(self, style_name):
+    #     """
+    #     Return the marker definition for a style.
+
+    #     The marker is stored in the HoPock TextStyle, not in
+    #     the ReportLab ParagraphStyle.
+
+    #     Returns:
+    #         Marker object, or None if the style has no marker.
+    #     """
+    #     text_style = self._styles.get(style_name.lower())
+
+    #     if text_style is None:
+    #         raise ValueError(f"Unknown style: {style_name}")
+
+    #     if text_style.marker is None:
+    #         return None
+
+    #     return Marker(
+    #         text=text_style.marker,
+    #         font=text_style.marker_font
+    #     )
+
+    def get_markerSIMPLE(self, style_name):
+        """
+        Return the marker definition for a style.
+
+        The marker is stored in the HoPock TextStyle, not in
+        the ReportLab ParagraphStyle.
+
+        Returns:
+            Marker object, or None if the style has no marker.
+        """
+        style_name = style_name.lower()
+
+        if not hasattr(self.style, style_name):
+            raise ValueError(f"Unknown style: {style_name}")
+
+        text_style = getattr(self.style, style_name)
+
+        if text_style.marker is None:
+            return None
+
+        return text_style.marker
+
+    def get_marker(self, style_name, **overrides):
+        style_name = style_name.lower()
+
+        if not hasattr(self.style, style_name):
+            raise ValueError(f"Unknown style: {style_name}")
+
+        text_style = getattr(self.style, style_name)
+
+        if text_style.marker is None:
+            return None
+
+        marker = text_style.marker
+
+        # Start with the base marker
+        result = {
+            "type": marker.type,
+            "text": marker.text,
+        }
+
+        # Apply overrides
+        result.update(overrides)
+
+        return Marker(**result)

@@ -19,6 +19,12 @@ class Line:
     dash: int = 0  # 10s = on 1s = off
 
 @dataclass
+class Marker:
+    type: str | None = None  # numbered or bulleted
+    text: str | None = None  # the string to use for the bullet
+    format: str | None = None  # the number format
+
+@dataclass
 class TextStyle:
     name: str | None = None
     font: Font = field(default_factory=Font)
@@ -26,6 +32,14 @@ class TextStyle:
     leading: int | None = None
     space_after: int | None = None
     space_before: int | None = None
+    list_type: str | None = None # for lists, bullet or number
+    left_indent: int | None = 0
+    first_line_indent: int | None = 0
+    marker: Marker = field(default_factory=Marker)
+    bulletfontname: str | None = None
+    bulletfontsize: int | None = None
+    bulletindent: int | None = 0
+    bulletcolor: str | None = "black"
 
 
 ##########################################################################################
@@ -52,7 +66,8 @@ class BookletStyle:
     body: TextStyle = field(default_factory=lambda: TextStyle(
         name = "BodyStyle",
         font = Font(name = "Helvetica", size = 8, color = "black"),
-        alignment = "left", leading = 10, space_after = 10, space_before = 0
+        alignment = "left", leading = 10, space_after = 10, space_before = 0,
+        # left_indent=0, first_line_indent=0,   bulletindent=0,
     ))
     heading1: TextStyle = field(default_factory=lambda: TextStyle(
         name = "HeadingStyle",
@@ -63,6 +78,15 @@ class BookletStyle:
         name = "HeadingStyle",
         font = Font(name = "Helvetica", size = 11, color = "blue"),
         alignment = "left", leading = 10, space_after = 10, space_before = 0
+    ))
+    bullet: TextStyle = field(default_factory=lambda: TextStyle(
+        name = "BulletStyle",
+        font = Font(name = "Helvetica", size = 8, color = "black"),
+        alignment = "left", leading = 10, space_after = 0, space_before = 0,
+        list_type="bullet", left_indent=10, first_line_indent=-10,  
+        marker=Marker(type="bullet", text="•"),
+        bulletfontname = "Helvetica", bulletfontsize = 8, 
+        bulletindent = 10, bulletcolor = "black"
     ))
 
     # generic line for most drawing
@@ -86,8 +110,9 @@ class PageStyle:
 
     title: TextStyle = field(default_factory=TextStyle)   # page title font
     body: TextStyle = field(default_factory=TextStyle)   # page body font
-    heading1: TextStyle = field(default_factory=TextStyle)   # page body font
-    heading2: TextStyle = field(default_factory=TextStyle)   # page body font
+    heading1: TextStyle = field(default_factory=TextStyle)   # H1
+    heading2: TextStyle = field(default_factory=TextStyle)   # H2
+    bullet: TextStyle = field(default_factory=TextStyle)   # bulleted 
 
     margin: int = None # margin 
     showframe: bool = None # show the frame
