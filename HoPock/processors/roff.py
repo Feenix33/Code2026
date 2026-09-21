@@ -98,7 +98,7 @@ bulletFormat: Optional callable or format string pattern to modify number/letter
 **kwds: Additional layout properties like leftIndent, rightIndent, spaceBefore, and spaceAfter
 
 """
-DEFAULT_BULLET_ARGUMENTS = \
+DEFAULT_BULLET_LISTFLOW_ARGUMENTS = \
     "start=None, " \
     "style=None, " \
     "bulletType='1', " \
@@ -123,6 +123,17 @@ class RoffProcessor(Processor):
                 fifo.append(Paragraph(paratext, current_style))
                 acc = [] # clear out the accumulator
 
+        def _text_modifier(mod: str, text:str):
+            # add html markers around the text and return
+            return "<"+ mod +">" +text+ "</"+ mod +">"
+
+        def resolve_style(tag: str, style_name: str) -> Style:
+            """Derives a style if overrides exist, otherwise returns the base style."""
+            base_style = styles.get(style_name)
+            override = style_overrides.get(tag)
+            return styles.derive(base_style, override) if override else base_style
+
+
         # text is the data to process
         fifo = deque() # holds the reportlab objects 
         acc = [] # accumulator to join lines
@@ -145,14 +156,30 @@ class RoffProcessor(Processor):
                 cmd = cmd[1:].lower()
 
                 # Handle regular text if present
-                _handle_acc()
                 match cmd:
+                    # case "b":
+                    #     acc.append(_text_modifier("b", args))
+                    case "b" | "u" | "i" | "strike" | "strong":
+                        acc.append(_text_modifier(cmd, args))
+
+                    case "bi":
+                        acc.append("<b><i>" + args + "</i></b>")
+
+                    case "biu":
+                        acc.append("<b><i><u>" + args + "</u></i></b>")
+
+                    case "bu":
+                        acc.append("<b><u>" + args + "</u></b>")
+
                     case "h1":
-                        temp_style = styles.get("heading1")
-                        fifo.append(Paragraph(args, temp_style))
+                        _handle_acc()
+                        use_style = resolve_style("h1", "heading1")
+                        fifo.append(Paragraph(args, use_style))
+
                     case "h2":
-                        temp_style = styles.get("heading2")
-                        fifo.append(Paragraph(args, temp_style))
+                        _handle_acc()
+                        use_style = resolve_style("h2", "heading2")
+                        fifo.append(Paragraph(args, use_style))
 
                     case "ft": # change current style
                         if len(args) == 0:
@@ -163,34 +190,30 @@ class RoffProcessor(Processor):
 
                     # List Style I
                     case "list": # opt       Start a list and pass the list arguments
-                        arg_str = DEFAULT_BULLET_ARGUMENTS
+                        _handle_acc()
+                        arg_str = DEFAULT_BULLET_LISTFLOW_ARGUMENTS
                         arg_str = arg_str + ", "  + args
                         bullet_opts = string_to_args(arg_str)
-                        bullet_opts["spaceAfter"] = 20
+                        # bullet_opts["spaceAfter"] = 20
 
                     case "lend": # [nd]         End the list
                         rlobj = []
-                        body_style = styles.get("body", spaceAfter=0)
+                        use_style = resolve_style("bullet", "bullet")
                         for b in bullets:
-                            rlobj.append(Paragraph(b, body_style))
+                            rlobj.append(Paragraph(b, use_style))
+                            # print (f"----------> {bullet_opts}")
                         fifo.append(ListFlowable(rlobj, **bullet_opts))
-                        # fifo.append(Spacer(1, temp_style.leading))
                                     
-                    case "li": #             List item  # add .item
+                    case "li" | "item": # list item
                         bullets.append(args)
 
                     # List Style II
                     case "bi": # bullet item
-                        # mark_dict = {
-                        #     "bulletFontName": 'Helvetica',
-                        #     "bulletFontSize": 8,    # Larger size for the bullet symbol itself
-                        #     "bulletIndent": 5,
-                        #     "bulletColor": "red"
-                        #     }
-                        # temp_style = styles.get("bullet", **mark_dict)
-                        temp_style = styles.get("bullet")
+                        # temp_style = styles.get("bullet")
+                        _handle_acc()
+                        use_style = resolve_style("bullet", "bullet")
                         mark = styles.get_marker("bullet", **marker_overrides)
-                        fifo.append(Paragraph(args, temp_style, bulletText=mark.text))  # "•"
+                        fifo.append(Paragraph(args, use_style, bulletText=mark.text))  # "•"
 
                     case "bm": # change bullet marker
                         if len(args) == 0:
@@ -203,8 +226,18 @@ class RoffProcessor(Processor):
                         temp_style = styles.get("bullet")
                         fifo.append(Spacer(1, temp_style.leading))
 
+                    case "vs": # vertical space
+                        _handle_acc()
+                        if len(args) == 0:
+                            fifo.append(Spacer(1, current_style.leading))
+                        else:
+                            fifo.append(Spacer(1, int(args)))
+
                     case "style": # set style overrides
-                        logger.debug(f"style {args}")
+                        logger.debug(f"style {len(args)}: {args}")
+                        style_id, _, mods = args.partition(' ')
+                        style_overrides[style_id] = string_to_args(mods)
+                        logger.debug(f"{style_id} overrides are {style_overrides[style_id]}")
                     case _:
                         logger.error(f"Unhandled command '{cmd}'")
             else:
