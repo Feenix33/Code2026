@@ -11,6 +11,13 @@ class GridPageDetail:
     spacing: float = 0.25  # inches for the grid and make them square
     grid: Point = field(default_factory=lambda: Point(0.0, 0.0)) # override the spacing, if one is 0, then use spacing
 
+@dataclass
+class ListPageDetail:
+    spacing: float = 0.0        # inches from one line to next else use font size
+    number: int = 0             # max number of items 0 = infinite
+    checkbox: str = 'x'         # x=boxes o=circles
+    drawlines: bool = True      # draw lines or not
+    mylist: list[str] = field(default_factory=list)
 
 @dataclass
 class TextPageDetail:

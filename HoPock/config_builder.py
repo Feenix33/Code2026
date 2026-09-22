@@ -1,6 +1,7 @@
 """
 Translates the p8 files into the booklet config file and styles
 """
+import ast
 from dataclasses import fields, is_dataclass
 from types import UnionType
 from typing import get_type_hints, get_origin, get_args, Union
@@ -25,6 +26,7 @@ from pages import (
     calendar,
     lines,
     grid,
+    list as list_page,
     runoff,
     text,
     markdown,
@@ -59,6 +61,32 @@ def convert_value(value, expected_type):
 
     # Handle int | None, str | None, etc.
     origin = get_origin(expected_type)
+
+    if origin is list:
+        item_type = get_args(expected_type)[0] if get_args(expected_type) else object
+
+        if isinstance(value, str):
+            try:
+                value = ast.literal_eval(value)
+            except (ValueError, SyntaxError) as exc:
+                raise ValueError(
+                    f"Cannot convert {value!r} to {expected_type}; "
+                    "use a quoted list literal"
+                ) from exc
+
+        if not isinstance(value, list):
+            raise ValueError(
+                f"Cannot convert {value!r} to {expected_type}"
+            )
+
+        if item_type is not object and not all(
+            isinstance(item, item_type) for item in value
+        ):
+            raise ValueError(
+                f"List values must be {item_type.__name__}: {value!r}"
+            )
+
+        return value
 
     if origin in (Union, UnionType):
 

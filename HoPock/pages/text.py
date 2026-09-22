@@ -47,7 +47,7 @@ class TextPage(Page):
                 logger.debug(f"file={self.config.file}")
                 # self.config.text = self.processor._read_file(self.config.file)
                 self.config.text = self._read_file(self.config.file)
-                logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
+                # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
             else:
                 logger.debug ("There is no file")
         
