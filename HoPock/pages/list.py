@@ -45,8 +45,10 @@ class ListPage(Page):
         if self.config.file:
             self.config.text = self._read_file(self.config.file)
             list_lines = self.config.text
-        else:
+        elif len(self.detail.mylist) > 0:
             list_lines = self.detail.mylist
+        else:
+            list_lines = self.config.text
 
         # x spacing for the line drawing
         xmin, xmax = self.style.margin, self.max.x - self.style.margin
