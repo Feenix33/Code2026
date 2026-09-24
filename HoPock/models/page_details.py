@@ -38,6 +38,7 @@ class DailyPageDetail:
     start: str = "8:00"
     end: str = "17:00"
     increment: int = 30
+    day: str = None
 
 @dataclass
 class CalendarPageDetail:

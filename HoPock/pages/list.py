@@ -58,7 +58,13 @@ class ListPage(Page):
         # logger.debug (f"draw lines {self.detail.drawlines}")
 
         # number of lines to draw if provided else until run out of room
-        max_lines = 100 if self.detail.number == 0 else self.detail.number
+        # max_lines = 100 if self.detail.number == 0 else self.detail.number
+        if self.detail.number == 0:
+            max_lines = 100
+        elif self.detail.number < 0:
+            max_lines = len(list_lines)
+        else:
+            max_lines = self.detail.number
         atline = 0
 
         # set the linespec
