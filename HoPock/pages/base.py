@@ -6,6 +6,7 @@ from models.data_classes import *
 from models.resolver import resolve_page_style
 # from models.reportlab_styles import *
 from pages.factory import PageFactory
+from processors.reportlab_style_gen import ReportLabStyleProvider
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,19 +14,30 @@ logger = logging.getLogger(__name__)
 
 class Page(ABC):
 
-    def __init__(self, config: PageConfig, booklet_style: BookletStyle):
+    def __init__(
+        self,
+        config: PageConfig,
+        booklet_style: BookletStyle
+    ):
+
         self.config = config
-        # self.style = config.style
+
         self.booklet_style = booklet_style
 
-        # get the effective style for this instance
+        # Get the effective style for this instance.
+        # Page-specific values override booklet defaults.
         self.style = resolve_page_style(
             self.booklet_style,
             config.style
-        ) 
+        )
+
+        # Create the ReportLab style provider for this page.
+        self.style_provider = ReportLabStyleProvider(
+            self.style
+        )
+
         self.detail = config.detail
         self.leading = None
-        # self.rl_styles = ReportLabStyles(self.style)
 
     def _render_start(self):
         self.canvas.saveState()
@@ -70,7 +82,12 @@ class Page(ABC):
     def _set_Line_format_default(self):
         self._set_line_format(self.style.line)
 
+    def _line_height(self):
+        return self.canvas._leading
 
+    def _string_width(self, str):
+        return self.canvas.stringWidth(str, self.canvas._fontname, self.canvas._fontsize)
+    
     def _set_font(self, font= None):
         if not font:
             font = self.style.font
@@ -94,7 +111,25 @@ class Page(ABC):
         self.canvas.restoreState()
         return y
 
+    def _draw_title_lrc(self, title_list=[], ypos=None):
+        self.canvas.saveState()
+        self._set_font_title()
 
+        # create a safe list
+        titles = (title_list[:3] + [None]*3)[:3]
+        tl, tc, tr = titles
+
+        y = ypos if ypos is not None else self.max.y - self.leading
+        if tl:
+            self.canvas.drawString(self.mgn, y, tl)
+        if tc:
+            x = self.mid.x
+            self.canvas.drawCentredString(x, y, tc)
+        if tr:
+            self.canvas.drawRightString(self.max.x-self.mgn, y, tr)
+        y -= self.leading
+        self.canvas.restoreState()
+        return y
 
 
     # =======================================================
@@ -104,12 +139,13 @@ class Page(ABC):
     def draw(self, resume=False):
         pass
 
-    def render(self, canvas, corner, rotate, dim, resume=False):
+    def render(self, canvas, corner, rotate, dim, mgn=10, resume=False):
         # resume means we are continuing a previous render that was not completed
         self.canvas = canvas # draw on this canvas
         self.rotate = rotate # need to rotate 
         self.corner = corner # panel corner
         self.max = dim
+        self.mgn = mgn
         self.mid = Point(x=self.max.x/2, y=self.max.y/2)
 
         # move to the proper panel area

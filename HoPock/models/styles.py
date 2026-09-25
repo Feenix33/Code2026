@@ -1,121 +1,234 @@
 """
-Presentation styles
-Note that the booklet style is the defaults for the booklet
-The page style is the overrides of the booklet defaults
+Styles used by the booklet and individual pages.
 """
 
 from dataclasses import dataclass, field
 
+
 @dataclass
 class Font:
+    """
+    Font definition.
+
+    None means that the value has not been specified and should
+    be inherited from another style.
+    """
     name: str | None = None
     size: int | None = None
     color: str | None = None
 
+
 @dataclass
 class Line:
-    color: str = "black"
-    width: int = 1
-    dash: int = 0  # 10s = on 1s = off
+    """
+    Line definition.
+
+    None means that the value has not been specified and should
+    be inherited from another style.
+    """
+    color: str | None = None
+    width: int | None = None
+    dash: int | None = None
+
 
 @dataclass
 class Marker:
-    type: str | None = None  # numbered or bulleted
-    text: str | None = None  # the string to use for the bullet
-    format: str | None = None  # the number format
+    """
+    Marker used by list styles.
+    """
+    type: str | None = None
+    text: str | None = None
+    format: str | None = None
+
 
 @dataclass
 class TextStyle:
+    """
+    Text style definition.
+
+    Values are None when the style is being used as an override.
+    BookletStyle provides the actual defaults.
+    """
     name: str | None = None
+
     font: Font = field(default_factory=Font)
+    font_medium: Font = field(default_factory=Font)
+    font_large: Font = field(default_factory=Font)
+
     alignment: str | None = None
-    leading: int | None = None
-    space_after: int | None = None
-    space_before: int | None = None
-    list_type: str | None = None # for lists, bullet or number
-    left_indent: int | None = 0
-    first_line_indent: int | None = 0
+    leading: float | None = None
+    space_after: float | None = None
+    space_before: float | None = None
+
+    # List-related settings
+    list_type: str | None = None
+    left_indent: float | None = None
+    first_line_indent: float | None = None
+    hanging_indent: bool | None = None
+
     marker: Marker = field(default_factory=Marker)
+
+    # ReportLab bullet settings
     bulletfontname: str | None = None
-    bulletfontsize: int | None = None
-    bulletindent: int | None = 0
-    bulletcolor: str | None = "black"
+    bulletfontsize: float | None = None
+    bulletindent: float | None = None
+    bulletcolor: str | None = None
 
-
-##########################################################################################
 
 @dataclass
 class BookletStyle:
-    # Booklet parameters that should be global and not overriden by pages
+    """
+    Booklet-wide defaults.
+
+    These values are the starting point for every page.
+    """
+
+    # ---------------------------------------------------------
+    # General booklet settings
+    # ---------------------------------------------------------
+
     border: int = 10
+    margin: int = 10
 
-    # Canvas font, should be used for the body style too
+    showframe: bool = False
+    showpage: bool = False
+
+    # ---------------------------------------------------------
+    # Default font
+    # ---------------------------------------------------------
+
     font: Font = field(default_factory=lambda: Font(
-        name = "Helvetica",
-        size = 8,
-        color = "black"
+        name="Helvetica",
+        size=8,
+        color="black"
     ))
-    
-    # --- Styles ---
+    font_medium: Font = field(default_factory=lambda: Font(name="Helvetica", size=10, color="green" ))
+    font_large: Font = field(default_factory=lambda: Font(name="Helvetica", size=12, color="blue" ))
+
+    # ---------------------------------------------------------
+    # Text styles
+    # ---------------------------------------------------------
+
     title: TextStyle = field(default_factory=lambda: TextStyle(
-        name = "TitleStyle",
-        font = Font(name = "Helvetica", size = 13, color = "orange"),
-        alignment = "center",
-        leading = 14, space_after = 12, space_before = 0
+        name="TitleStyle",
+        font=Font(
+            name="Helvetica",
+            size=13,
+            color="orange"
+        ),
+        alignment="center",
+        leading=14,
+        space_after=12,
+        space_before=0
     ))
+
     body: TextStyle = field(default_factory=lambda: TextStyle(
-        name = "BodyStyle",
-        font = Font(name = "Helvetica", size = 8, color = "black"),
-        alignment = "left", leading = 10, space_after = 10, space_before = 0,
-        # left_indent=0, first_line_indent=0,   bulletindent=0,
+        name="BodyStyle",
+        font=Font(
+            name="Helvetica",
+            size=8,
+            color="black"
+        ),
+        font_large=Font(name="Helvetica", size=14, color="green"),
+        alignment="left",
+        leading=10,
+        space_after=10,
+        space_before=0
     ))
+
     heading1: TextStyle = field(default_factory=lambda: TextStyle(
-        name = "HeadingStyle",
-        font = Font(name = "Helvetica", size = 12, color = "black"),
-        alignment = "left", leading = 10, space_after = 10, space_before = 0
+        name="HeadingStyle",
+        font=Font(
+            name="Helvetica",
+            size=12,
+            color="black"
+        ),
+        alignment="left",
+        leading=14,
+        space_after=10,
+        space_before=0
     ))
+
     heading2: TextStyle = field(default_factory=lambda: TextStyle(
-        name = "HeadingStyle",
-        font = Font(name = "Helvetica", size = 11, color = "blue"),
-        alignment = "left", leading = 10, space_after = 10, space_before = 0
+        name="HeadingStyle",
+        font=Font(
+            name="Helvetica",
+            size=11,
+            color="blue"
+        ),
+        alignment="left",
+        leading=13,
+        space_after=10,
+        space_before=0
     ))
+
     bullet: TextStyle = field(default_factory=lambda: TextStyle(
-        name = "BulletStyle",
-        font = Font(name = "Helvetica", size = 8, color = "black"),
-        alignment = "left", leading = 10, space_after = 0, space_before = 0,
-        list_type="bullet", left_indent=10, first_line_indent=-10,  
-        marker=Marker(type="bullet", text="•"),
-        bulletfontname = "Helvetica", bulletfontsize = 8, 
-        bulletindent = 10, bulletcolor = "black"
+        name="BulletStyle",
+        font=Font(
+            name="Helvetica",
+            size=8,
+            color="black"
+        ),
+        alignment="left",
+        leading=10,
+        space_after=0,
+        space_before=0,
+
+        list_type="bullet",
+        left_indent=10,
+        first_line_indent=-10,
+        hanging_indent=True,
+
+        marker=Marker(
+            type="bullet",
+            text="•"
+        ),
+
+        bulletfontname="Helvetica",
+        bulletfontsize=8,
+        bulletindent=10,
+        bulletcolor="black"
     ))
 
-    # generic line for most drawing
-    line: Line = field(default_factory=lambda: Line(color = "black", width = 1, dash = 0))
+    # ---------------------------------------------------------
+    # Line styles
+    # ---------------------------------------------------------
 
-    # frame line (if used)
-    frame: Line = field(default_factory=lambda: Line(color = "grey", width = 1, dash = 0))
+    line: Line = field(default_factory=lambda: Line(
+        color="lightgrey",
+        width=1,
+        dash=0
+    ))
 
-    margin: int = 10 # margin inside the frame (another for each frame in booklet config)
-    # titletext: str = None #page title
-    showframe: bool = False  # show the frame using frame Line
-    showpage: bool = False   # show page number or not (for testing)
+    frame: Line = field(default_factory=lambda: Line(
+        color="grey",
+        width=1,
+        dash=0
+    ))
 
 
 @dataclass
 class PageStyle:
-    # All these fields should be in the Booklet Style class 
-    font: Font = field(default_factory=Font)   # page font
-    line: Line = field(default_factory=Line)   # general line
-    frame: Line = field(default_factory=Line)   # frame line
+    """
+    Overrides for a single page.
 
-    title: TextStyle = field(default_factory=TextStyle)   # page title font
-    body: TextStyle = field(default_factory=TextStyle)   # page body font
-    heading1: TextStyle = field(default_factory=TextStyle)   # H1
-    heading2: TextStyle = field(default_factory=TextStyle)   # H2
-    bullet: TextStyle = field(default_factory=TextStyle)   # bulleted 
+    Every value defaults to None so that it inherits the
+    corresponding value from BookletStyle.
+    """
 
-    margin: int = None # margin 
-    showframe: bool = None # show the frame
-    showpage: bool = None  # show page number or not (for testing)
-    
+    font: Font = field(default_factory=Font)
+    font_medium: Font = field(default_factory=Font)
+    font_large: Font = field(default_factory=Font)
 
+    line: Line = field(default_factory=Line)
+    frame: Line = field(default_factory=Line)
+
+    title: TextStyle = field(default_factory=TextStyle)
+    body: TextStyle = field(default_factory=TextStyle)
+    heading1: TextStyle = field(default_factory=TextStyle)
+    heading2: TextStyle = field(default_factory=TextStyle)
+    bullet: TextStyle = field(default_factory=TextStyle)
+
+    margin: int | None = None
+    showframe: bool | None = None
+    showpage: bool | None = None

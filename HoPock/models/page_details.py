@@ -35,10 +35,12 @@ class RoffPageDetail:
 
 @dataclass
 class DailyPageDetail:
-    start: str = "8:00"
-    end: str = "17:00"
-    increment: int = 30
+    start: str = "7:00"
+    end: str = "18:00"
+    increment: int = 60
     day: str = None
+    stretch: bool = True
+    dividers: bool = True
 
 @dataclass
 class CalendarPageDetail:

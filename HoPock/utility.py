@@ -1,13 +1,12 @@
 """
 Generic utilty routines
 """
-import logging
-logger = logging.getLogger(__name__)
-from datetime import date
-
-
+from datetime import datetime, date
 import ast
 import re
+
+import logging
+logger = logging.getLogger(__name__)
 
 def OLDstring_to_args(arg_str):
     """
@@ -66,7 +65,7 @@ def string_to_args(arg_str):
 
 
 
-def header_lcr(format_string, header_date=None):
+def header_lcr(format_string="\t{dd} {mmm}", header_date=None):
     """
     Format a header string into left, center, and right sections.
 
@@ -140,3 +139,38 @@ def header_lcr(format_string, header_date=None):
     # Three or more sections: first = left,
     # second = center, everything after = right.
     return parts[0], parts[1], "\t".join(parts[2:])
+
+def parse_mystery_date_string(date_str: str) -> date:
+    """
+    Converts a date string in various formats into a datetime.date object.
+    Supported formats:
+    - yyyy-mm-dd
+    - mm/dd
+    - mm/dd/yyyy
+    - dd-mmm-yy
+    - dd-mmm-yyyy
+    - mm-dd-yyyy
+    """
+    # Define standard format codes matching the requirements
+    formats = [
+        "%Y-%m-%d",  # yyyy-mm-dd
+        "%m/%d",     # mm/dd (defaults to current year)
+        "%m/%d/%Y",  # mm/dd/yyyy
+        "%d-%b-%y",  # dd-mmm-yy (e.g., 25-Sep-26)
+        "%d-%b-%Y",  # dd-mmm-yyyy (e.g., 25-Sep-2026)
+        "%m-%d-%Y"   # mm-dd-yyyy
+    ]
+    
+    for fmt in formats:
+        try:
+            # Attempt to parse and immediately extract the date component
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+            
+    raise ValueError(f"Date string '{date_str}' does not match any expected formats.")
+
+# --- Quick Usage Examples ---
+# print(parse_date_string("2026-09-25"))  # Output: 2026-09-25
+# print(parse_date_string("25-Sep-26"))   # Output: 2026-09-25
+# print(parse_date_string("09/25"))       # Output: 2026-09-25

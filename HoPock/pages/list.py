@@ -19,21 +19,22 @@ Options
 )
 
 class ListPage(Page):
-    LIST_PAGE_DEFAULT_FONT_SIZE = 14
+    # LIST_PAGE_DEFAULT_FONT_SIZE = 14
 
     def __init__(self, config, booklet_style):
         super().__init__(config, booklet_style)
         self.spacing = None
         # logger.debug(f"{self.detail.spacing}=>{self.spacing}")
-        if config.style.font.size is None:
-            self.style.font.size = self.LIST_PAGE_DEFAULT_FONT_SIZE
+        # if config.style.font.size is None:
+        #     self.style.font.size = self.LIST_PAGE_DEFAULT_FONT_SIZE
 
     def draw(self, resume=False):
         logger.debug (f"Drawing list page with params {self.detail}")
         if self.detail.spacing:
             self.spacing = int(self.detail.spacing * inch)
         else:
-            self._set_font()
+            use_font = self.style.font_large
+            self._set_font(use_font)
             self.spacing = int(self.leading)
 
         if self.config.titletext:
@@ -53,9 +54,6 @@ class ListPage(Page):
         # x spacing for the line drawing
         xmin, xmax = self.style.margin, self.max.x - self.style.margin
         xleft = xmin + self.spacing * 1.2 # adding space for the checkboxes
-
-        # logger.debug(f"Rendering with font size {self.canvas._fontsize} and {self.canvas._leading}")
-        # logger.debug (f"draw lines {self.detail.drawlines}")
 
         # number of lines to draw if provided else until run out of room
         # max_lines = 100 if self.detail.number == 0 else self.detail.number
