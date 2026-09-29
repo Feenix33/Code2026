@@ -330,6 +330,7 @@ from pages import (
     runoff,
     text,
     markdown,
+    weekly,
 )
 
 

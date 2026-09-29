@@ -1,5 +1,8 @@
+from datetime import date
+
 from definition_parser import DefinitionParser
 from config_builder import build_configuration
+from utility import header_lcr
 
 
 def test_normal_options():
@@ -31,3 +34,16 @@ def test_list_page_mylist_option():
         "three a and three b",
         "four 4 4 4",
     ]
+
+
+def test_weekly_dayformat_accepts_escaped_tabs():
+    entries = DefinitionParser().parse_lines([
+        r'weekly dayformat="{dd}\t{mmm}\t{yyyy}"',
+    ])
+
+    config = build_configuration(entries)
+
+    assert header_lcr(
+        config.pages[0].detail.dayformat,
+        date(2026, 9, 21),
+    ) == ("21", "Sep", "2026")

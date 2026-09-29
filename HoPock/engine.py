@@ -122,23 +122,34 @@ class BookletEngine:
         
     def build(self):
         for pgcfg in self.cfg.pages:
-            page = PageFactory.create(pgcfg, self.cfg.style)
-            # config: PageConfig, booklet_style: BookletStyle):
-            # corner = self.panels[self.panel_num].corner
-            # rotate = self.panels[self.panel_num].rotate
-            result = False
-            resume = False
-            while not result: # keep rendering until the page is complete
-                corner = self.panels[self.panel_num].corner
-                rotate = self.panels[self.panel_num].rotate
-                result = page.render(self.canvas, corner, rotate, self.panel_dim, resume=resume)
-                if self.cfg.addpages and not result: # if the page is not complete, add a new page
-                    resume = True
-                else:
-                    result = True # exit the loop if the page is complete or addpages is False
-                self.panel_num = (self.panel_num + 1) % self.cfg.panels
-                if self.panel_num == 0: # we had a rollover 
-                    self.canvas.showPage() # start a new page
+
+            expanded_configs = PageFactory.expand(pgcfg)
+            for expanded_cfg in expanded_configs:
+
+                page = PageFactory.create(
+                    expanded_cfg,
+                    self.cfg.style
+                )
+
+                # code prior to the expand
+                # page = PageFactory.create(pgcfg, self.cfg.style)
+
+                # config: PageConfig, booklet_style: BookletStyle):
+                # corner = self.panels[self.panel_num].corner
+                # rotate = self.panels[self.panel_num].rotate
+                result = False
+                resume = False
+                while not result: # keep rendering until the page is complete
+                    corner = self.panels[self.panel_num].corner
+                    rotate = self.panels[self.panel_num].rotate
+                    result = page.render(self.canvas, corner, rotate, self.panel_dim, resume=resume)
+                    if self.cfg.addpages and not result: # if the page is not complete, add a new page
+                        resume = True
+                    else:
+                        result = True # exit the loop if the page is complete or addpages is False
+                    self.panel_num = (self.panel_num + 1) % self.cfg.panels
+                    if self.panel_num == 0: # we had a rollover 
+                        self.canvas.showPage() # start a new page
 
         # logger.debug ("showPage()")
         if self.panel_num != 0: # we had a rollover 

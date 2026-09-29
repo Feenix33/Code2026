@@ -1,46 +1,13 @@
 """
 Generic utilty routines
 """
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import ast
 import re
 
 import logging
 logger = logging.getLogger(__name__)
 
-def OLDstring_to_args(arg_str):
-    """
-    Should convert an input string with key value pairs to actual key value pairs
-    """
-    # 1. Handle empty or whitespace-only strings
-    if not arg_str or not arg_str.strip():
-        return {}
-        
-    kwargs = {}
-    # Split by comma and filter out any empty chunks (e.g., trailing commas)
-    pairs = [item.strip() for item in arg_str.split(",") if item.strip()]
-    
-    for pair in pairs:
-        # Ignore items without an '=' sign
-        if "=" not in pair:
-            continue
-            
-        # 2. split("=", 1) handles spaces and preserves '=' inside values
-        key, val = pair.split("=", 1)
-        key = key.strip()
-        val = val.strip()
-        
-        # 3. Try parsing numeric/boolean primitives, fall back to string
-        try:
-            kwargs[key] = ast.literal_eval(val)
-        except (ValueError, SyntaxError):
-            kwargs[key] = val
-            
-    return kwargs
-
-"""
-Converted the above to the below to handle commas or no commas
-"""
 def string_to_args(arg_str):
     """Convert whitespace- or comma-separated key/value pairs to a dict."""
     if not arg_str or not arg_str.strip():
@@ -65,7 +32,7 @@ def string_to_args(arg_str):
 
 
 
-def header_lcr(format_string="\t{dd} {mmm}", header_date=None):
+def header_lcr(format_string="\t{dd}{mmm}", header_date=None):
     """
     Format a header string into left, center, and right sections.
 
@@ -91,6 +58,8 @@ def header_lcr(format_string="\t{dd} {mmm}", header_date=None):
 
     if header_date is None:
         header_date = date.today()
+
+    format_string = format_string.replace(r"\t", "\t")
 
     day_letters = {
         0: "M",  # Monday
@@ -158,7 +127,8 @@ def parse_mystery_date_string(date_str: str) -> date:
         "%m/%d/%Y",  # mm/dd/yyyy
         "%d-%b-%y",  # dd-mmm-yy (e.g., 25-Sep-26)
         "%d-%b-%Y",  # dd-mmm-yyyy (e.g., 25-Sep-2026)
-        "%m-%d-%Y"   # mm-dd-yyyy
+        "%m-%d-%Y",  # mm-dd-yyyy
+        "%d%b"       # dd-mmm (25Sep)
     ]
     
     for fmt in formats:
@@ -174,3 +144,38 @@ def parse_mystery_date_string(date_str: str) -> date:
 # print(parse_date_string("2026-09-25"))  # Output: 2026-09-25
 # print(parse_date_string("25-Sep-26"))   # Output: 2026-09-25
 # print(parse_date_string("09/25"))       # Output: 2026-09-25
+
+
+def get_monday(input_date: date = None) -> date:
+    # If no date is provided, default to today's date
+    if input_date is None:
+        input_date = date.today()
+        
+    # .weekday() returns 0 for Monday, 1 for Tuesday, ..., 6 for Sunday
+    # Subtracting the weekday value always points back to that week's Monday
+    return input_date - timedelta(days=input_date.weekday())
+
+def flip_format_string(text: str) -> str:
+    """
+    For a title format string that separates left, center, and right by tabs, this routine 
+    flips the string so it is right center left
+    """
+    # 1. Standardize literal "\t" into actual tab characters
+    normalized = text.replace(r"\t", "\t")
+    parts = normalized.split("\t")
+    
+    # 2. Pad the list to guarantee exactly 3 sections [left, center, right]
+    while len(parts) < 3:
+        parts.append("")
+        
+    # 3. Flip the left (index 0) and right (index 2) sections
+    parts[0], parts[2] = parts[2], parts[0]
+    
+    # 4. Remove trailing empty sections to eliminate trailing tabs
+    while parts and parts[-1] == "":
+        parts.pop()
+        
+    # 5. Rejoin and return using a standard tab character
+    return "\t".join(parts)
+
+

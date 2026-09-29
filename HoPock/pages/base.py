@@ -111,22 +111,26 @@ class Page(ABC):
         self.canvas.restoreState()
         return y
 
-    def _draw_title_lrc(self, title_list=[], ypos=None):
+    def _draw_title_lrc(self, title_list=[], ypos=None, xleft=None, xright=None, use_title_font=True):
         self.canvas.saveState()
-        self._set_font_title()
+        if use_title_font:
+            self._set_font_title()
 
         # create a safe list
         titles = (title_list[:3] + [None]*3)[:3]
         tl, tc, tr = titles
 
+        xl = xleft if xleft is not None else self.mgn
+        xr = xright if xright is not None else self.max.x - self.mgn
+        xmid = xl + ((xr - xl) / 2)
+
         y = ypos if ypos is not None else self.max.y - self.leading
         if tl:
-            self.canvas.drawString(self.mgn, y, tl)
+            self.canvas.drawString(xl, y, tl)
         if tc:
-            x = self.mid.x
-            self.canvas.drawCentredString(x, y, tc)
+            self.canvas.drawCentredString(xmid, y, tc)
         if tr:
-            self.canvas.drawRightString(self.max.x-self.mgn, y, tr)
+            self.canvas.drawRightString(xr, y, tr)
         y -= self.leading
         self.canvas.restoreState()
         return y

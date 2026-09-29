@@ -36,7 +36,8 @@ class DailyPage(Page):
         self._set_font() # use default font
 
         # get the title text fmt, date
-        tl, tc, tr = header_lcr("{dd}\t{mmmm}\t{yyyy}", thisday)
+        titlefmt = detail.dayformat
+        tl, tc, tr = header_lcr(titlefmt, thisday)
         for tt in [tl, tc, tr]:
             if len(tt) > 0:
                 logger.debug (f"Text is {tt}")
