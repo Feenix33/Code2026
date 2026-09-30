@@ -331,6 +331,7 @@ from pages import (
     text,
     markdown,
     weekly,
+    cover,
 )
 
 

@@ -50,6 +50,17 @@ class WeeklyPageDetail:
     flipformat: bool = False    # flip the format string on the second page
 
 @dataclass
+class CoverPageDetail:
+    box2text: str = None    # Text for box 2
+    box3text: str = None    # Text for box 3
+    titleyper: float = 0.875 # y percent pos of title 7/8
+    box2yper: float = 0.5  # y percent pos of title 1/2
+    box3yper: float = 0.25  # y percent pos of box3 1/4
+    titleht: float = 0.25    # y percent of title box size
+    titlefill: str = None   # fill color
+    titlebox: bool = True   # draw the box around the title
+
+@dataclass
 class CalendarPageDetail:
     month: int | None = None
     year: int | None = None
