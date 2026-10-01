@@ -179,3 +179,73 @@ def flip_format_string(text: str) -> str:
     return "\t".join(parts)
 
 
+
+
+def clean_recipe_strings(strings_list):
+    """
+    Takes a list of strings and replaces unprintable characters and common abbreviations
+
+    Usage:
+    cleaned_data = clean_recipe_strings(raw_data)
+    for original, cleaned in zip(raw_data, cleaned_data):
+    """
+    # 1. Unicode Fraction & Symbol Replacements
+    # Matches anywhere in the text, converting fractions and removing degree symbols
+    literal_replacements = {
+        "½": "1/2",
+        "¼": "1/4",
+        "¾": "3/4",
+        "⅓": "1/3",
+        "⅔": "2/3",
+        "°": ""
+    }
+    
+    # 2. Measurement Unit Mappings to standard abbreviations
+    # Grouped logically by their destination abbreviation
+    unit_mappings = {
+        "c": [r"cups?", r"c\."],
+        "tsp": [r"teaspoons?", r"tsp\.?", r"t\."],
+        "tbsp": [r"tablespoons?", r"tbsp\.?", r"tbs\.?", r"T\."],
+        "oz": [r"ounces?", r"oz\."],
+        "lb": [r"pounds?", r"lbs?\.?"],
+        "g": [r"grams?", r"g\."],
+        "kg": [r"kilograms?", r"kg\."]
+    }
+    
+    # 3. Compile Patterns
+    # We dynamically build regex to catch unit-only words OR digit-unit pairs with any spacing
+    measurement_patterns = []
+    for abbrev, variations in unit_mappings.items():
+        # Joins variations, e.g., (?:cups?|c\.)
+        variations_pattern = f"(?:{'|'.join(variations)})"
+        
+        # Pattern A: Standardize space between a number and the unit -> "2  cups" to "2c"
+        # \s* handles zero, one, or multiple spaces dynamically
+        measurement_patterns.append((
+            re.compile(r'(\d+(?:\/\d+)?)\s*' + variations_pattern + r'\b', re.IGNORECASE),
+            rf'\1{abbrev}'
+        ))
+        
+        # Pattern B: Clean up standalone instances keeping word boundaries -> "Add cups" to "Add c"
+        # Restricts matching inside words like "buttercup"
+        measurement_patterns.append((
+            re.compile(r'\b' + variations_pattern + r'\b', re.IGNORECASE),
+            abbrev
+        ))
+
+    processed_strings = []
+    
+    for text in strings_list:
+        # Step A: Apply literal character mappings
+        for target, replacement in literal_replacements.items():
+            pattern = re.compile(re.escape(target), re.IGNORECASE)
+            text = pattern.sub(replacement, text)
+            
+        # Step B: Clean, normalize, and condense measurement unit spacing
+        for pattern, replacement in measurement_patterns:
+            text = pattern.sub(replacement, text)
+            
+        processed_strings.append(text)
+        
+    return processed_strings
+

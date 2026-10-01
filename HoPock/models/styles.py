@@ -122,13 +122,14 @@ class BookletStyle:
         space_before=0
     ))
 
+    # todo: do we need the font_large here? Should be able to delete I think
     body: TextStyle = field(default_factory=lambda: TextStyle(
         name="BodyStyle",
         font=Font(
             name="Helvetica",
             size=8,
             color="black"
-        ),
+        ), 
         font_large=Font(name="Helvetica", size=14, color="green"),
         alignment="left",
         leading=10,
@@ -136,17 +137,16 @@ class BookletStyle:
         space_before=0
     ))
 
+    nospace: TextStyle = field(default_factory=lambda: TextStyle(
+        name="NoSpace",
+        font=Font( name="Helvetica", size=8, color="black" ), 
+        alignment="left", leading=0, space_after=0, space_before=0
+    ))
+
     heading1: TextStyle = field(default_factory=lambda: TextStyle(
         name="HeadingStyle",
-        font=Font(
-            name="Helvetica",
-            size=12,
-            color="black"
-        ),
-        alignment="left",
-        leading=14,
-        space_after=10,
-        space_before=0
+        font=Font( name="Helvetica", size=12, color="black" ),
+        alignment="left", leading=14, space_after=10, space_before=0
     ))
 
     heading2: TextStyle = field(default_factory=lambda: TextStyle(

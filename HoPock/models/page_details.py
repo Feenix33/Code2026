@@ -61,6 +61,15 @@ class CoverPageDetail:
     titlebox: bool = True   # draw the box around the title
 
 @dataclass
+class RecipePageDetail:
+    blanks: bool = True             # if a line is blank, add a blank line between lines
+    firstline: bool = False         # if true, then the first line is a title
+    clean: bool = True              # Process through the cleaner
+    spacer: bool = False            # put space between lines
+    title_style: str = "title"      # style for the title
+    body_style: str = "nospace"     # style for the body
+
+@dataclass
 class CalendarPageDetail:
     month: int | None = None
     year: int | None = None

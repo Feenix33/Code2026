@@ -84,6 +84,11 @@ class ReportLabStyleProvider:
     def get(self, name, **overrides):
         name = name.lower()
 
+        # logger.debug("StyleProvider.get: name=%s", name)
+        # logger.debug(
+        #     "Resolved font color: %s",
+        #     getattr(getattr(self.style, name), "font", None).color
+        # )
         # Start with persistent overrides for this style
         properties = self._overrides.get(name, {}).copy()
 

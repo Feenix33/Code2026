@@ -332,6 +332,7 @@ from pages import (
     markdown,
     weekly,
     cover,
+    recipe,
 )
 
 

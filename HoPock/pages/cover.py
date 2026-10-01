@@ -65,12 +65,14 @@ class CoverPage(Page):
         do_stroke=0
         if detail.titlebox: 
             self._set_line_format(self.style.line)
+            logger.debug(f"Set line style {self.style.line}")
             do_stroke=1
 
         # get the fill color
         do_fill = 0
         if detail.titlefill:
             self.canvas.setFillColor(detail.titlefill)
+            logger.debug(f"Fill {detail.titlefill}")
             do_fill=1
         # draw the box
         self.canvas.rect(xleft, ybox1, xwidth, titleht, stroke=do_stroke, fill=do_fill)
