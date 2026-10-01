@@ -225,6 +225,7 @@ class PageStyle:
 
     title: TextStyle = field(default_factory=TextStyle)
     body: TextStyle = field(default_factory=TextStyle)
+    nospace: TextStyle = field(default_factory=TextStyle)
     heading1: TextStyle = field(default_factory=TextStyle)
     heading2: TextStyle = field(default_factory=TextStyle)
     bullet: TextStyle = field(default_factory=TextStyle)

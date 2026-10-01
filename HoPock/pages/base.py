@@ -51,7 +51,7 @@ class Page(ABC):
     def _render_end(self):
         self.canvas.restoreState()
 
-    def _read_file(self, file_path): # ususually store in config.text
+    def OLD_read_file(self, file_path): # ususually store in config.text
         try:
             # Read the file and split into a list of strings
             string_array = file_path.read_text(encoding='utf-8').splitlines()
@@ -61,6 +61,38 @@ class Page(ABC):
             # print(f"Error: The file '{file_path}' does not exist.")
             logger.error (f"Error: The file '{file_path}' does not exist.")
             # Initialize an empty list or handle the fallback here
+            string_array = []
+
+        return string_array
+ 
+    def _read_file(self, file_path, join_lines=False): # usually store in config.text
+        try:
+            # Read the file and split into a list of strings
+            string_array = file_path.read_text(encoding='utf-8').splitlines()
+            logger.debug(f"Read raw text file {file_path} with {len(string_array)} lines")
+
+            # New behavior: group chunks by blank lines if requested
+            if join_lines:
+                grouped_array = []
+                current_entry = []
+                
+                for line in string_array:
+                    stripped = line.strip()
+                    if stripped:
+                        current_entry.append(stripped)
+                    elif current_entry:
+                        # Blank line signals a new entry
+                        grouped_array.append(" ".join(current_entry))
+                        current_entry = []
+                
+                # Append the final chunk if the file didn't end with a blank line
+                if current_entry:
+                    grouped_array.append(" ".join(current_entry))
+                
+                return grouped_array
+
+        except FileNotFoundError:
+            logger.error(f"Error: The file '{file_path}' does not exist.")
             string_array = []
 
         return string_array

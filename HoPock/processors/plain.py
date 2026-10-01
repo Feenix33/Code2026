@@ -14,39 +14,39 @@ logger = logging.getLogger(__name__)
 Note that this worked
          fifo.append(Paragraph(line, styles.get("body", spaceAfter=20)))
 """
-class PlainTextProcessor(Processor):
+# class PlainTextProcessor(Processor):
 
-    #def process(self, text, rlstyles:ReportLabStyles, titletext=None, space_after=None, first_line=False, blanks=False, **kwargs):
-    def process(self, text, styles:ReportLabStyleProvider, titletext=None, first_line=False, blanks=False, **kwargs):
-        """
-        first_line: the text buffer first line is title
-        blanks: if text has a blank line, put in a spacer
-        """
+#     #def process(self, text, rlstyles:ReportLabStyles, titletext=None, space_after=None, first_line=False, blanks=False, **kwargs):
+#     def process(self, text, styles:ReportLabStyleProvider, titletext=None, first_line=False, blanks=False, **kwargs):
+#         """
+#         first_line: the text buffer first line is title
+#         blanks: if text has a blank line, put in a spacer
+#         """
 
-        fifo = deque()
+#         fifo = deque()
 
-        startq = 0
-        spacer_height = styles.get("body").fontSize
+#         startq = 0
+#         spacer_height = styles.get("body").fontSize
 
-        # Handle title string if passed
-        if titletext and len(titletext) > 0:
-            line = titletext
-            fifo.append(Paragraph(line, styles.get("title")))
+#         # Handle title string if passed
+#         if titletext and len(titletext) > 0:
+#             line = titletext
+#             fifo.append(Paragraph(line, styles.get("title")))
 
-        # process the first line
-        if first_line and len(text) > 0:
-            line = text[0]
-            fifo.append(Paragraph(line, styles.get("title")))
-            startq += 1
+#         # process the first line
+#         if first_line and len(text) > 0:
+#             line = text[0]
+#             fifo.append(Paragraph(line, styles.get("title")))
+#             startq += 1
 
-        for line in text[startq:]:
-            if len(line) == 0:
-                if blanks:
-                    fifo.append(Spacer(0, spacer_height))
-            else:
-                fifo.append(Paragraph(line, styles.get("body")))
+#         for line in text[startq:]:
+#             if len(line) == 0:
+#                 if blanks:
+#                     fifo.append(Spacer(0, spacer_height))
+#             else:
+#                 fifo.append(Paragraph(line, styles.get("body")))
 
-        return fifo
+#         return fifo
 
 
 # def _coerce_override_value(value):

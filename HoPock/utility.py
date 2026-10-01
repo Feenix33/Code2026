@@ -190,7 +190,8 @@ def clean_recipe_strings(strings_list):
     for original, cleaned in zip(raw_data, cleaned_data):
     """
     # 1. Unicode Fraction & Symbol Replacements
-    # Matches anywhere in the text, converting fractions and removing degree symbols
+    # Matches anywhere in the text, converting fractions and removing degree symbols.
+    # Mixed forms like "1½" must become "1 1/2" rather than "11/2".
     literal_replacements = {
         "½": "1/2",
         "¼": "1/4",
@@ -205,7 +206,7 @@ def clean_recipe_strings(strings_list):
     unit_mappings = {
         "c": [r"cups?", r"c\."],
         "tsp": [r"teaspoons?", r"tsp\.?", r"t\."],
-        "tbsp": [r"tablespoons?", r"tbsp\.?", r"tbs\.?", r"T\."],
+        "tbsp": [r"tablespoons?", r"tbsp\.?", r"tbs\.?", r"tblsp\.?", r"T\."],
         "oz": [r"ounces?", r"oz\."],
         "lb": [r"pounds?", r"lbs?\.?"],
         "g": [r"grams?", r"g\."],
@@ -219,11 +220,12 @@ def clean_recipe_strings(strings_list):
         # Joins variations, e.g., (?:cups?|c\.)
         variations_pattern = f"(?:{'|'.join(variations)})"
         
-        # Pattern A: Standardize space between a number and the unit -> "2  cups" to "2c"
-        # \s* handles zero, one, or multiple spaces dynamically
+        # Pattern A: Standardize a numeric amount and the abbreviated unit with a space,
+        # e.g. "1/2 tsp" or "2 cups" -> "1/2 tsp" / "2 c".
+        # The unit is kept as a separate token so we do not collapse "1/2tsp".
         measurement_patterns.append((
             re.compile(r'(\d+(?:\/\d+)?)\s*' + variations_pattern + r'\b', re.IGNORECASE),
-            rf'\1{abbrev}'
+            rf'\1 {abbrev}'
         ))
         
         # Pattern B: Clean up standalone instances keeping word boundaries -> "Add cups" to "Add c"
@@ -236,15 +238,23 @@ def clean_recipe_strings(strings_list):
     processed_strings = []
     
     for text in strings_list:
-        # Step A: Apply literal character mappings
+        # Step A: Handle mixed whole-plus-fraction values before the generic replacement.
+        # "1½" should become "1 1/2", not "11/2".
+        for target, replacement in literal_replacements.items():
+            if target in {"½", "¼", "¾", "⅓", "⅔"}:
+                pattern = re.compile(rf'(?<=\d){re.escape(target)}')
+                text = pattern.sub(f" {replacement}", text)
+
+        # Step B: Apply literal character mappings elsewhere
         for target, replacement in literal_replacements.items():
             pattern = re.compile(re.escape(target), re.IGNORECASE)
             text = pattern.sub(replacement, text)
-            
-        # Step B: Clean, normalize, and condense measurement unit spacing
+
+        # Step C: Normalize numeric amounts and unit spacing without collapsing the unit
+        # onto the numeric value, e.g. "1/2tsp" -> "1/2 tsp".
         for pattern, replacement in measurement_patterns:
             text = pattern.sub(replacement, text)
-            
+
         processed_strings.append(text)
         
     return processed_strings

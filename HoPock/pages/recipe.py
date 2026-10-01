@@ -4,7 +4,7 @@ Pages based on text page need a processor for content handline
 """
 from pages.base import Page
 from pages.factory import PageFactory
-from processors.plain import PlainTextProcessor, SimpleTextProcessor
+from processors.plain import SimpleTextProcessor
 from processors.reportlab_style_gen import ReportLabStyleProvider
 from utility import clean_recipe_strings
 
@@ -26,7 +26,7 @@ class RecipePage(Page):
 
     def __init__(self, config, booklet_style, processor=None):
         super().__init__(config, booklet_style)
-        self.processor = processor or PlainTextProcessor()
+        self.processor = processor or SimpleTextProcessor()
         self.style_provider = ReportLabStyleProvider(self.style)
 
         # FIFO for processed lines to reportlab format
@@ -51,11 +51,8 @@ class RecipePage(Page):
             else:
                 logger.debug ("There is no file")
 
-
-
-            #### TODO:
-            # add the recipe cleaner
-            
+            if self.detail.clean:
+                self.config.text = clean_recipe_strings(self.config.text)
             #
             # process the text buffer into RL objects
             #

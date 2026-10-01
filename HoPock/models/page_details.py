@@ -24,6 +24,9 @@ class TextPageDetail:
     spacer: bool = False  # put space between lines
     blanks: bool = False # if a line is blank, add a blank line between lines
     firstline: bool = False # if true, then the first line is a title
+    title_style: str = "title"      # style for the title
+    body_style: str = "body"     # style for the body
+    joinlines: bool = False        # if reading a file and this is true, join lines until a blank line is reached
 
 @dataclass
 class MarkdownPageDetail:
