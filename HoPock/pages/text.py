@@ -44,21 +44,19 @@ class TextPage(Page):
         added = False
 
         if not resume:
+            logger.debug (f"Initial render")
             if self.config.file: # override text if there is a file
                 logger.debug(f"file={self.config.file}")
                 # self.config.text = self.processor._read_file(self.config.file)
                 self.config.text = self._read_file(self.config.file, self.detail.joinlines)
                 # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
-                if self.config.titletext:
-                    self.config.text.insert(0, self.config.titletext)
-            else:
-                logger.debug ("There is no file")
+
+            if self.config.titletext:
+                self.config.text.insert(0, self.config.titletext)
         
             #
             # process the text buffer into RL objects
             #
-
-            # rlstyles:ReportLabStyles, space_after=None, first_line=False, blanks=False,
             self.processed_lines = self.processor.process(self.config.text, self.style_provider, #self.rl_styles,
                                                         space_after=self.detail.spacer, first_line=self.detail.firstline, blanks=self.detail.blanks,
                                                         title_style_name=self.detail.title_style, 
@@ -66,6 +64,7 @@ class TextPage(Page):
 
             # logger.debug(f"TextPage.draw: Processed {len(self.processed_lines)} lines into reportlab objects")
             # logger.debug(f"First line: {self.processed_lines[0] if len(self.processed_lines) > 0 else 'None'}")
+
         # entry point to add to frame, start here on resume
         while self.processed_lines:
             item = self.processed_lines.popleft()
