@@ -58,7 +58,7 @@ current_style = styles.get(
 Do NOT do this: current_style.fontSize = 14
 """
 
-REPORTLAB_FONT_PROPERTIES = {
+defunctREPORTLAB_FONT_PROPERTIES = {
     "font.name": "fontName",
     "font.size": "fontSize",
     "font.color": "textColor",
@@ -71,6 +71,27 @@ REPORTLAB_FONT_PROPERTIES = {
     "bulletindent": "bulletIndent",
     "bulletcolor": "bulletColor",
     "first_line_indent": "firstLineIndent"
+}
+
+# list that maps the user facing left side to the RL properties on the right
+STYLE_PROPERTIES = {
+    "font.name": "fontName",
+    "font.size": "fontSize",
+    "font.color": "textColor",
+
+    "leading": "leading",
+    "space.after": "spaceAfter",
+    "space.before": "spaceBefore",
+
+    "alignment": "alignment",
+
+    "bulletfontname": "bulletFontName",
+    "bulletfontsize": "bulletFontSize",
+    "bulletindent": "bulletIndent",
+    "bulletcolor": "bulletColor",
+
+    "first_line_indent": "firstLineIndent",
+    "right_indent": "rightIndent",
 }
 
 
@@ -188,7 +209,7 @@ class ReportLabStyleProvider:
 
 
 
-    def derive(self, base_style, options):
+    def derive2(self, base_style, options):
 
         properties = {
             "fontName": base_style.fontName,
@@ -298,3 +319,129 @@ class ReportLabStyleProvider:
         result.update(overrides)
 
         return Marker(**result)
+
+
+    # =====================================
+    def _get_properties(self, text_style):
+        alignment_map = {
+            "left": TA_LEFT,
+            "center": TA_CENTER,
+            "right": TA_RIGHT,
+            "justify": TA_JUSTIFY,
+        }
+
+        return {
+            "fontName": text_style.font.name or "Helvetica",
+            "fontSize": text_style.font.size or 8,
+            "textColor": text_style.font.color or "black",
+
+            "leading": text_style.leading or 10,
+            "spaceAfter": text_style.space_after or 0,
+            "spaceBefore": text_style.space_before or 0,
+
+            "alignment": alignment_map.get(
+                (text_style.alignment or "left").lower(),
+                TA_LEFT
+            ),
+
+            "bulletFontName": text_style.bulletfontname or "Helvetica",
+            "bulletFontSize": text_style.bulletfontsize or 8,
+            "bulletIndent": (
+                text_style.bulletindent
+                if text_style.bulletindent is not None
+                else 0
+            ),
+            "bulletColor": text_style.bulletcolor or "black",
+
+            "firstLineIndent": (
+                text_style.first_line_indent
+                if text_style.first_line_indent is not None
+                else 0
+            ),
+
+            "rightIndent": (
+                text_style.right_indent
+                if text_style.right_indent is not None
+                else 0
+            ),
+        }
+
+    def _create_style(self, name, overrides):
+        if not hasattr(self.style, name):
+            raise ValueError(f"Unknown style: {name}")
+
+        text_style = getattr(self.style, name)
+
+        properties = self._get_properties(text_style)
+
+        # Apply temporary/persistent overrides
+        properties.update(self._convert_overrides(overrides))
+
+        return ParagraphStyle(
+            name=name,
+            **properties
+        )
+    def _convert_overrides(self, overrides):
+        alignment_values = {
+            "left": TA_LEFT,
+            "center": TA_CENTER,
+            "right": TA_RIGHT,
+            "justify": TA_JUSTIFY,
+        }
+
+        result = {}
+
+        for name, value in overrides.items():
+
+            reportlab_name = STYLE_PROPERTIES.get(name)
+
+            if reportlab_name is None:
+                raise ValueError(
+                    f"Unknown style option: {name}"
+                )
+
+            if name == "alignment" and isinstance(value, str):
+                try:
+                    value = alignment_values[value.lower()]
+                except KeyError as error:
+                    raise ValueError(
+                        f"Unknown alignment: {value}"
+                    ) from error
+
+            result[reportlab_name] = value
+
+        return result
+    def derive(self, base_style, options):
+
+        properties = {
+            "fontName": base_style.fontName,
+            "fontSize": base_style.fontSize,
+            "textColor": base_style.textColor,
+
+            "leading": base_style.leading,
+            "spaceAfter": base_style.spaceAfter,
+            "spaceBefore": base_style.spaceBefore,
+
+            "alignment": base_style.alignment,
+
+            "bulletFontName": base_style.bulletFontName,
+            "bulletFontSize": base_style.bulletFontSize,
+            "bulletIndent": base_style.bulletIndent,
+            "bulletColor": base_style.bulletColor,
+
+            "firstLineIndent": base_style.firstLineIndent,
+            "rightIndent": base_style.rightIndent,
+        }
+
+        properties.update(
+            self._convert_overrides(options)
+        )
+
+        # Automatically adjust leading when font size changes.
+        if "font.size" in options and "leading" not in options:
+            properties["leading"] = properties["fontSize"] * 1.2
+
+        return ParagraphStyle(
+            name=f"{base_style.name}_variant",
+            **properties
+        )

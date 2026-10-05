@@ -1,0 +1,52 @@
+.style h1 font.color=blue
+.h1 Dictionary
+
+.ft space.after=0 font.color=green
+.b word_in_bold
+The definition of the word
+
+.b word2_in_bold
+Second definition
+
+.b word3_in_bold
+Third definition
+
+.h2 Next section Heading
+
+
+.H1 Types of Pages
+# List format I usees list->li -> lend
+.list 
+.li cover
+.li daily
+.li grid
+.li lines
+.li list
+.li recipe
+.li runoff
+.li text
+.li weekly
+.lend
+
+.vs
+.H1 Cover
+A simple cover page with limited formatting commands.
+
+.H2 Commands
+.ft body space.after=0 
+.b Box
+This is the first box
+
+.b box2
+This is the second box
+
+\.box2text=<text>
+Trying something different
+
+\\# comment line
+
+.style heading2 font.color=orange
+.H2 font.color=red Notes
+
+.ft
+This is a simple cover page but doesn't do it all

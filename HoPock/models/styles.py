@@ -65,6 +65,7 @@ class TextStyle:
     left_indent: float | None = None
     first_line_indent: float | None = None
     hanging_indent: bool | None = None
+    right_indent: bool | None = None
 
     marker: Marker = field(default_factory=Marker)
 

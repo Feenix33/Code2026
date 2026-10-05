@@ -181,6 +181,10 @@ class RoffProcessor(Processor):
                         use_style = resolve_style("h2", "heading2")
                         fifo.append(Paragraph(args, use_style))
 
+                    case "\\.": # text line starts with .L
+                        logger.debug("Got the PERIOD line")
+                        acc.append(line[2:])
+
                     case "ft": # change current style
                         if len(args) == 0:
                             current_style = styles.get("body")
@@ -234,13 +238,18 @@ class RoffProcessor(Processor):
                             fifo.append(Spacer(1, int(args)))
 
                     case "style": # set style overrides
-                        logger.debug(f"style {len(args)}: {args}")
+                        # logger.debug(f"style {len(args)}: {args}")
                         style_id, _, mods = args.partition(' ')
                         style_overrides[style_id] = string_to_args(mods)
                         logger.debug(f"{style_id} overrides are {style_overrides[style_id]}")
                     case _:
                         logger.error(f"Unhandled command '{cmd}'")
             else:
+                if line.startswith("\\."):
+                    line = line[1:]
+                elif line.startswith("\\\\#"): # text line starts with .L
+                    line = line[2:]
+
                 acc.append(line)
 
         _handle_acc()
