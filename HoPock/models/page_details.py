@@ -20,6 +20,14 @@ class ListPageDetail:
     mylist: list[str] = field(default_factory=list)
 
 @dataclass
+class TrackWeekPageDetail:
+    number: int = 0             # max number of items 0 = infinite
+    checkbox: str = None        # x=boxes o=circles
+    habits: str = None          # habits separated by | 
+    header: bool = True         # print the DOW header
+    dow: bool = False           # print DOW in the boxes
+
+@dataclass
 class TextPageDetail:
     spacer: bool = False  # put space between lines
     blanks: bool = False # if a line is blank, add a blank line between lines

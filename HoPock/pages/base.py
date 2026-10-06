@@ -175,6 +175,22 @@ class Page(ABC):
     def draw(self, resume=False):
         pass
 
+    def startLandscape(self):
+        canvas = self.canvas
+        canvas.saveState()
+        self.inLandscape = True
+        canvas.translate(self.mid.x, self.mid.y)
+        canvas.rotate(90)
+        canvas.translate(-self.mid.y, -self.mid.x)
+        self.mid = Point(self.mid.y, self.mid.x)
+        self.max = Point(self.max.y, self.max.x)
+
+    def endLandscape(self):
+        canvas = self.canvas
+        canvas.restoreState()
+        self.mid = Point(self.mid.y, self.mid.x)
+        self.max = Point(self.max.y, self.max.x)
+
     def render(self, canvas, corner, rotate, dim, mgn=10, resume=False):
         # resume means we are continuing a previous render that was not completed
         self.canvas = canvas # draw on this canvas

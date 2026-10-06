@@ -190,7 +190,8 @@ class DefinitionParser:
         for raw_line in lines:
 
             # Remove only newline characters.
-            raw = raw_line.rstrip("\r\n")
+            # CMEFix: added the lstrip for leading blanks in the p8 file.
+            raw = raw_line.rstrip("\r\n").lstrip()
 
             stripped = raw.strip()
 

@@ -333,6 +333,7 @@ from pages import (
     weekly,
     cover,
     recipe,
+    trackweek,
 )
 
 

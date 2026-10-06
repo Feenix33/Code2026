@@ -45,8 +45,8 @@ Trying something different
 
 \\# comment line
 
-.style heading2 font.color=orange
-.H2 font.color=red Notes
+.style H2  font.color=orange
+.H2 Notes
 
 .ft
 This is a simple cover page but doesn't do it all
