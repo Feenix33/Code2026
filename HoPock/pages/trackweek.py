@@ -21,9 +21,9 @@ class TrackWeekPage(Page):
     def __init__(self, config, booklet_style):
         super().__init__(config, booklet_style)
 
-
-    def draw(self, resume=False):
-        logger.debug (f"Drawing week track with params {self.detail}")
+    def _horizontal(self):
+        
+        logger.debug (f"Horizontal weekly track with params {self.detail}")
         self.startLandscape()
 
         if self.config.titletext:
@@ -34,7 +34,7 @@ class TrackWeekPage(Page):
         # set the styles
         self._set_Line_format_default()
         self._set_font(self.style.font_large)
-        lineht = self.canvas._leading
+        lineht = self.leading
         ypos -= lineht * 1.5
 
         label_list = []
@@ -97,3 +97,82 @@ class TrackWeekPage(Page):
 
 
         self.endLandscape()
+
+    def _vertical(self):
+        logger.debug (f"Weekly Tracker in vertical mode {self.detail}")
+        if self.config.titletext:
+            ypos = self._draw_title()
+        else:
+            ypos = self.max.y
+
+        # set the styles
+        self._set_Line_format_default()
+        self._set_font(self.style.font_large)
+        lineht = self.leading
+        ypos -= lineht * 1.5
+
+        label_list = []
+        if self.detail.habits:
+            label_list = self.detail.habits.split("|")
+        if len(self.config.text):
+            label_list = self.config.text
+
+        # dimensions
+        xw = (self.max.x * 0.75)/ 7
+        xpos = self.mid.x
+
+        # No header in vertical format
+        # if self.detail.header:
+        #     for d in ["M", "T", "W", "T", "F", "S", "S"]:
+        #         self.canvas.drawCentredString(xpos, ypos, d)
+        #         xpos += xw
+        #     ypos -= lineht
+
+        max_habits = self.detail.number if self.detail.number else 100
+        if max_habits < 0: max_habits = len(label_list)
+
+        n = 0
+        while max_habits > 0 and ypos > lineht*2:
+            if n < len(label_list):
+               self.canvas.drawString(self.mgn, ypos, label_list[n])
+            else:
+               y = ypos
+               xright = self.max.x * 0.75
+               self.canvas.line(self.mgn, y, xright, y)
+            #    self.canvas.drawString(self.mgn, ypos, "Habit")
+
+            ypos -= self.leading
+            xpos = self.mid.x / 2
+            r = lineht/2-1
+            dow = 'MTWRTSS'
+            for j in range(7):
+                box = None
+                if self.detail.checkbox in {'0','o', 'O'}:
+                    box = 'circle'
+                elif self.detail.checkbox in {'x','X','#'}:
+                    box = 'square'
+                else:
+                    if n % 2:
+                        box = 'circle'
+                    else:
+                        box = 'square'
+                if box == 'circle':
+                    self.canvas.circle(xpos, ypos, r, stroke=1, fill=0)
+                else:
+                    self.canvas.rect(xpos-r, ypos-r, 2*r, 2*r, stroke=1, fill=0)
+
+                if self.detail.dow:
+                    self._set_font(self.style.font_medium)
+                    self.canvas.drawCentredString(xpos, ypos-(self.canvas._leading/3), dow[j])
+                    self._set_font(self.style.font_large)
+
+                xpos += xw
+            ypos -= self.leading * 1.75
+            n += 1
+            max_habits -= 1
+
+    def draw(self, resume=False):
+        if self.detail.portrait:
+            self._vertical()
+        else:
+            self._horizontal()

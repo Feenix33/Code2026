@@ -26,6 +26,7 @@ class TrackWeekPageDetail:
     habits: str = None          # habits separated by | 
     header: bool = True         # print the DOW header
     dow: bool = False           # print DOW in the boxes
+    portrait: bool = False      # default to draw landscape
 
 @dataclass
 class TextPageDetail:
