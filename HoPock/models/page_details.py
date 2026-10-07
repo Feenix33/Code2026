@@ -20,6 +20,14 @@ class ListPageDetail:
     mylist: list[str] = field(default_factory=list)
 
 @dataclass
+class TrackMonthPageDetail:
+    count: int = 0             # max number of items 0 = infinite
+    checkbox: str = None        # x=boxes o=circles
+    habits: str = None          # habits separated by | 
+    label: bool = True          # put numbers in the boxes
+    habitcount: str = None      # string representing how many boxes
+
+@dataclass
 class TrackWeekPageDetail:
     number: int = 0             # max number of items 0 = infinite
     checkbox: str = None        # x=boxes o=circles
