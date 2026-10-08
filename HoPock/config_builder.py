@@ -36,6 +36,7 @@ from pages import (
     recipe,
     trackweek,
     trackmonth,
+    score,
 )
 
 

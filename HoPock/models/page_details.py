@@ -20,6 +20,11 @@ class ListPageDetail:
     mylist: list[str] = field(default_factory=list)
 
 @dataclass
+class ScorePageDetail:
+    count: int = -1              # max number of items 0 = infinite
+    players: str = None         # polayer names  separated by | 
+
+@dataclass
 class TrackMonthPageDetail:
     count: int = 0             # max number of items 0 = infinite
     checkbox: str = None        # x=boxes o=circles

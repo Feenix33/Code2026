@@ -23,16 +23,16 @@ class TrackMonthPage(Page):
 
     def _init_layout(self):
         """Initializes shared configurations, fonts, and sets up baseline tracking variables."""
+        lineht = self.leading
         if self.config.titletext:
             ypos = self._draw_title()
+            ypos -= lineht
         else:
-            ypos = self.max.y
+            ypos = self.max.y - 2*lineht
 
         self._set_Line_format_default()
         self._set_font(self.style.font_large)
         
-        lineht = self.leading
-        ypos -= lineht * 1.5
 
         # Build shared label list
         label_list = []
@@ -70,12 +70,14 @@ class TrackMonthPage(Page):
 
         return ypos, lineht, label_list, max_habits, habit_count
 
-    def _draw_checkbox_grid(self, xleft, ypos, dx, dy, rad, total, draw_labels):
+    def _draw_checkboxes(self, ypos, medfont, lgfont, total, draw_labels):
         """Draws a standard row of 7 tracking indicators (circles or squares)."""
-        xpos = xleft
-
-        nd = 0 # number drawn <= habit_count
-        ri = 0 # row index
+        self.canvas.saveState()
+        dy = lgfont.size * 1.3
+        rad = (dy/2) +1
+        dx = 2*rad + 2
+        xleft = (self.max.x - 7*dx) / 2 + dx/2
+        # logger.debug(f"xleft={xleft} dx={dx} max={self.max.x}")
 
         # Resolve shape
         if self.detail.checkbox in {'x', 'X', '#'}:
@@ -83,8 +85,12 @@ class TrackMonthPage(Page):
         else:
             box = 'circle'
 
-        while nd < total:
+        # draw the boxes
+        xpos = xleft
+        nd = 0 # number drawn <= habit_count
+        ri = 0 # row index
 
+        while nd < total:
             # Render shape
             if box == 'circle':
                 self.canvas.circle(xpos, ypos, rad, stroke=1, fill=0)
@@ -93,9 +99,9 @@ class TrackMonthPage(Page):
 
             # Optional Day number
             if draw_labels:
-                self._set_font(self.style.font_medium)
+                self._set_font(medfont) #self.style.font_medium)
                 self.canvas.drawCentredString(xpos, ypos - (self.canvas._leading / 3), str(nd+1))
-                self._set_font(self.style.font_large)
+                self._set_font(lgfont) #self.style.font_large)
 
             xpos += dx
             nd += 1
@@ -103,9 +109,12 @@ class TrackMonthPage(Page):
             if ri >= 7:
                 ri = 0
                 xpos = xleft
-                ypos -= dy
+                ypos -= dy * 1.25
 
+        self.canvas.restoreState()
         return ypos
+
+
 
     """
         count: int = 0             # max number of items 0 = infinite
@@ -116,12 +125,13 @@ class TrackMonthPage(Page):
     """
     def draw(self, resume=False):
         logger.debug(f"Monthly Tracker render w/details {self.detail}")
-        ypos, lineht, label_list, max_habits, habit_count = self._init_layout()
+        ypos, lineht, label_list, max_habits, habit_count = self._init_layout() #draws the title too
         # logger.debug(f"{label_list} for {max_habits}")
         # logger.debug(f"{habit_count}")
 
         n = 0
         while n < max_habits:
+            self._set_font(self.style.font_large)
             # habit label
             # logger.debug(f"Drawing {label_list[n]}")
             if len(label_list[n]) > 0:
@@ -131,17 +141,19 @@ class TrackMonthPage(Page):
                 xright = self.max.x * 0.75
                 self.canvas.line(self.mgn, ypos, xright, ypos)
 
-            ypos -= lineht
+            ypos -= lineht*1.5
 
             # draw the grid
-            dx = (self.max.x - (2*self.mgn)) / 7
-            dy = lineht
-            rad = (lineht/2) 
-            dx = 2*rad + 2
-            xleft = (self.max.x - 7*dx) / 2
+            # logger.debug(f"Drawing grid {self.canvas._leading} and {self.canvas._fontsize}")
+            # dy = lineht+1
+            # rad = (lineht/2) +1
+            # dx = 2*rad + 4
             total = habit_count[n]
             draw_labels = self.detail.label
-            ypos = self._draw_checkbox_grid(xleft, ypos, dx, dy, rad, total, draw_labels)
-            ypos -= lineht
+            # ypos = self._draw_checkbox_grid(xleft, ypos, dx, dy, rad, total, draw_labels)
+            ypos = self._draw_checkboxes(ypos, medfont=self.style.font_medium, lgfont=self.style.font_large, total=total, draw_labels=draw_labels)
+            # ypos -= lineht
             
             n += 1
+            # max 2 so on second pass hardcode to mid
+            ypos = self.mid.y - lineht
