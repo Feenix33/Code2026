@@ -52,8 +52,8 @@ class TextStyle:
     name: str | None = None
 
     font: Font = field(default_factory=Font)
-    font_medium: Font = field(default_factory=Font)
-    font_large: Font = field(default_factory=Font)
+    # font_medium: Font = field(default_factory=Font)
+    # font_large: Font = field(default_factory=Font)
 
     alignment: str | None = None
     leading: float | None = None
@@ -131,11 +131,6 @@ class BookletStyle:
             size=8,
             color="black"
         ), 
-        font_large=Font(name="Helvetica", size=14, color="green"),
-        alignment="left",
-        leading=10,
-        space_after=10,
-        space_before=0
     ))
 
     nospace: TextStyle = field(default_factory=lambda: TextStyle(

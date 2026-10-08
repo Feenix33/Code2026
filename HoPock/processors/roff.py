@@ -127,7 +127,7 @@ class RoffProcessor(Processor):
             # add html markers around the text and return
             return "<"+ mod +">" +text+ "</"+ mod +">"
 
-        def resolve_style(tag: str, style_name: str) -> Style:
+        def resolve_style(tag: str, style_name: str): # -> Style:
             """Derives a style if overrides exist, otherwise returns the base style."""
             base_style = styles.get(style_name)
             override = style_overrides.get(tag)
