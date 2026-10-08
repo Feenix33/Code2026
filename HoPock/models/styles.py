@@ -98,13 +98,10 @@ class BookletStyle:
     # Default font
     # ---------------------------------------------------------
 
-    font: Font = field(default_factory=lambda: Font(
-        name="Helvetica",
-        size=8,
-        color="black"
-    ))
+    font: Font = field(default_factory=lambda: Font(name="Helvetica", size=8, color="black"))
     font_medium: Font = field(default_factory=lambda: Font(name="Helvetica", size=10, color="green" ))
     font_large: Font = field(default_factory=lambda: Font(name="Helvetica", size=12, color="blue" ))
+    font_fixed: Font = field(default_factory=lambda: Font(name="Courier", size=8, color="red" ))
 
     # ---------------------------------------------------------
     # Text styles
@@ -215,6 +212,7 @@ class PageStyle:
     font: Font = field(default_factory=Font)
     font_medium: Font = field(default_factory=Font)
     font_large: Font = field(default_factory=Font)
+    font_fixed: Font = field(default_factory=Font)
 
     line: Line = field(default_factory=Line)
     frame: Line = field(default_factory=Line)

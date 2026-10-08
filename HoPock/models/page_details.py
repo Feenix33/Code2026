@@ -21,8 +21,13 @@ class ListPageDetail:
 
 @dataclass
 class ScorePageDetail:
-    count: int = -1              # max number of items 0 = infinite
-    players: str = None         # polayer names  separated by | 
+    count: int = -1             # max number of items 0 = infinite
+    players: str = None         # player names  separated by | 
+
+@dataclass
+class DicePageDetail:
+    die: str = "2d6"            # dice to roll
+    dice: str = None            # same as above, dice has precidence
 
 @dataclass
 class TrackMonthPageDetail:

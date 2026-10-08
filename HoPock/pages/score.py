@@ -18,6 +18,8 @@ Options
     "score",
     detail_class=ScorePageDetail
 )
+
+
 class ScorePage(Page):
     # LIST_PAGE_DEFAULT_FONT_SIZE = 14
 
