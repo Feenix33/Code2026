@@ -80,6 +80,11 @@ class WeeklyPageDetail:
     flipformat: bool = False    # flip the format string on the second page
 
 @dataclass
+class WorkWeekPageDetail:
+    date: str = None         # This is week, shifts to monday
+    dateformat: str = "{dd}{mmm}" #None   # format string for day headers/titles
+
+@dataclass
 class CoverPageDetail:
     box2text: str = None    # Text for box 2
     box3text: str = None    # Text for box 3

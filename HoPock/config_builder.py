@@ -38,6 +38,7 @@ from pages import (
     trackmonth,
     score,
     dice,
+    workweek,
 )
 
 
