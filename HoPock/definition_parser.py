@@ -41,6 +41,10 @@ class DefinitionParser:
             More text.
         }
 
+        page7 {
+            \\# This is text beginning with a hash.
+        }
+
     Page types and option names are case-insensitive and are returned
     in lowercase.
 
@@ -149,7 +153,7 @@ class DefinitionParser:
 
         return DefinitionEntry(
             page_type=page_type,
-            text=[content]
+            text=[self._unescape_text_line(content)]
         )
 
     def _parse_block(self, page_type, first_content, lines):
@@ -185,7 +189,9 @@ class DefinitionParser:
 
             else:
                 text_mode = True
-                text.append(first_content)
+                text.append(
+                    self._unescape_text_line(first_content)
+                )
 
         for raw_line in lines:
 
@@ -226,13 +232,24 @@ class DefinitionParser:
                 text_mode = True
 
             if text_mode:
-                text.append(raw)
+                text.append(
+                    self._unescape_text_line(raw)
+                )
 
         return DefinitionEntry(
             page_type=page_type,
             options=options,
             text=text
         )
+
+    @staticmethod
+    def _unescape_text_line(line):
+        """Remove the escape from a leading ``\\#`` in text."""
+
+        if line.startswith("\\#"):
+            return line[1:]
+
+        return line
 
     def _collect_continued_line(self, first_line, lines):
         """

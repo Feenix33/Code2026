@@ -26,7 +26,7 @@ class WorkWeekPage(Page):
         if detail.date:
             monday_date = parse_mystery_date_string(detail.date)
         monday_date = get_monday(monday_date)
-
+  
 
         xleft = self.mgn
         xright = self.max.x - self.mgn

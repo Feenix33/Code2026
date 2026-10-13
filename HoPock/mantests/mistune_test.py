@@ -77,6 +77,11 @@ This is a **paragraph** with *italics* and ***bold italics***.
 
 > A blockquote with **bold** text.
 
+```
+def HelloWorld():
+    print ("Hello, world!")
+```
+
 | Unhandled | Table |
 | --------- | ----- |
 | Skipped   | Cell  |

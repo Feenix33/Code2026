@@ -1,7 +1,15 @@
 function setup() {
-    createCanvas(800, 600);
+  // Creates a canvas that fills the preview window
+  createCanvas(600, 400);
 }
 
 function draw() {
-    background(220);
+  // Dark grey background (Coding Train style)
+  background(51); 
+  
+  // Draw a bright circle that follows your mouse
+  fill(199, 200, 255);
+  noStroke();
+  circle(mouseX, mouseY, 64);
 }
+
