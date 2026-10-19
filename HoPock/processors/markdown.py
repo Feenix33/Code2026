@@ -25,10 +25,12 @@ Multiple blank line CRs are joined in the output. Blank line rendered as space b
 """
 from processors.base import Processor
 from collections import deque
-from reportlab.platypus import Frame, Paragraph, Spacer #, PageBreak
+from reportlab.platypus import Frame, Paragraph, XPreformatted, ListFlowable, Spacer #, PageBreak
 from processors.reportlab_style_gen import ReportLabStyleProvider
 import mistune
 from mistune.renderers.markdown import MarkdownRenderer
+from models.styles import Marker
+from utility import string_to_args
 
 import logging
 logger = logging.getLogger(__name__)
@@ -57,14 +59,33 @@ class QueueRenderer(MarkdownRenderer):
         return ""
 
     def list(self, token: dict, state: mistune.BlockState) -> str:
+        """Handle both ordered and unordered lists."""
+
         ordered = token['attrs'].get('ordered', False)
         style = "numbered_list" if ordered else "bullet_list"
-        
-        # Iterate over individual list items in children
+
+        self.queue.append(("BEGIN_" + style, ""))
+
         for item_token in token.get('children', []):
-            item_text = self.render_children(item_token, state).strip()
+            # Each child is a list_item.
+            item_parts = []
+
+            for child in item_token.get('children', []):
+                # Extract the contents of block_text or paragraph.
+                if child['type'] in ('block_text', 'paragraph'):
+                    item_text = self.render_tokens(
+                        child.get('children', []), state
+                    )
+                    if item_text:
+                        item_parts.append(item_text)
+
+            item_text = " ".join(item_parts).strip()
+
             if item_text:
                 self.queue.append((style, item_text))
+                logger.debug(f"AST list item [{item_text}]")
+
+        self.queue.append(("END_LIST", ""))
         return ""
 
     def block_quote(self, token: dict, state: mistune.BlockState) -> str:
@@ -95,45 +116,82 @@ class MarkdownProcessor(Processor):
         sty_body = styles.get("body")
         sty_heading1 = styles.get("heading1")
         sty_heading2 = styles.get("heading2")
-        # sty_bullet = styles.get("bullet")
+        sty_bullet = styles.get("bullet")
 
         sty_code = styles.derive(styles.get("body"),{"font.name": "Courier", "space.after": 0})
 
-        marker = styles.get_marker("bullet")
-        sty_bullet = styles.derive(
-            styles.get("body"),
-                {"space.after": 0, "font.color":"blue"}
-            )
+        # marker_bullet = styles.get_marker("bullet")
+        # sty_bullet = styles.derive(
+        #     styles.get("body"),
+        #         {"space.after": 0, "font.color":"blue"}
+        #     )
         
-        marker = styles.get_marker("bullet")
-        sty_numbered = styles.derive(
-            styles.get("body"),
-                {"space.after": 0, "font.color":"green"}
-            )    
+        # marker_numbered = styles.get_marker("bullet")
+        # sty_numbered = styles.derive(
+        #     styles.get("body"),
+        #         {"space.after": 0, "font.color":"green" }
+        #     )    
 
 
         renderer = QueueRenderer()
         markdown = mistune.create_markdown(renderer=renderer, plugins=['table'])
         markdown('\n'.join(text))
 
+        print ("\nDEBUG DEBUG\n")
+        for style, text in renderer.queue:
+            print(f"{style} -> {text}")
+        print ("\nEND DEBUG\n\n")
+
         for style, ptext in renderer.queue:
+            added = False
             match style:
                 case 'h1':
                     style = sty_heading1
                 case 'h2':
                     style = sty_heading2
+                case 'BEGIN_bullet_list':
+                    bullets = []
+                    bullet_opts = {"bulletType":'bullet',  'bulletFontSize': sty_bullet.fontSize}
+                    added = True
+                case 'BEGIN_numbered_list':
+                    bullets = []
+                    bullet_opts = {"bulletType":"1", 'bulletFontSize': sty_bullet.fontSize}
+                    logger.debug ("Begin numbered list")
+                    added = True
+                case 'END_LIST':
+                    rlobj = []
+                    # sty_bullet.bulletType = "1"
+                    for b in bullets:
+                        rlobj.append(Paragraph(b, sty_bullet))
+                    fifo.append(ListFlowable(rlobj, **bullet_opts))
+                    fifo.append(Spacer(1, sty_bullet.leading))
+                    logger.debug(f"End list with bullet options {bullet_opts}")
+                    bullets = []
+                    added = True
+                        
                 case 'bullet_list':
-                    style = sty_bullet
-                    logger.debug(f"Bullet: {ptext}")
+                    bullets.append(ptext)
+                    # style = sty_bullet
+                    # mark = styles.get_marker("bullet")
+                    # fifo.append(Paragraph(ptext, style, bulletText=mark.text) )
+                    added = True
+                    # logger.debug(f"Bullet: {ptext}")
                 case 'numbered_list':
-                    style = sty_numbered
+                    # style = sty_numbered
+                    # mark = Marker(type="numbered",text=None,format="{number}.")
                     logger.debug(f"Bullet: {ptext}")
+                    # fifo.append(Paragraph(ptext, style, bulletText="bulletType=1") )
+                    bullets.append(ptext)
+                    added = True
                 case 'code_block':
                     style = sty_code
                     logger.debug(f"Code block")
+                    fifo.append(XPreformatted(ptext, sty_code))
+                    added = True
                 case _: # default
                   style = sty_body
-            fifo.append(Paragraph(ptext, style))
+            if not added:
+                fifo.append(Paragraph(ptext, style))
  
         return fifo
 

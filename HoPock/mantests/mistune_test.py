@@ -30,10 +30,12 @@ class QueueRenderer(MarkdownRenderer):
         style = "numbered_list" if ordered else "bullet_list"
         
         # Iterate over individual list items in children
+        self.queue.append(("BEGIN A LIST", " "))  # cme
         for item_token in token.get('children', []):
             item_text = self.render_children(item_token, state).strip()
             if item_text:
                 self.queue.append((style, item_text))
+        self.queue.append(("END A LIST", " "))  # cme
         return ""
 
     def block_quote(self, token: dict, state: mistune.BlockState) -> str:

@@ -113,7 +113,6 @@ DEFAULT_BULLET_LISTFLOW_ARGUMENTS = \
 
 class RoffProcessor(Processor):
 
-    #def process(self, text, rlstyles:ReportLabStyles, titletext=None, space_after=None, first_line=False, blanks=False, **kwargs):
     def process(self, text, styles:ReportLabStyleProvider, **kwargs):
 
         def _handle_acc():
@@ -162,7 +161,7 @@ class RoffProcessor(Processor):
                     case "b" | "u" | "i" | "strike" | "strong":
                         acc.append(_text_modifier(cmd, args))
 
-                    case "bi":
+                    case "boi":
                         acc.append("<b><i>" + args + "</i></b>")
 
                     case "biu":
@@ -211,12 +210,14 @@ class RoffProcessor(Processor):
                     case "li" | "item": # list item
                         bullets.append(args)
 
-                    # List Style II
+                    # List Style II  - 
+                    # cme: 14Oct think this can only do bullet chars not numbered
                     case "bi": # bullet item
                         # temp_style = styles.get("bullet")
-                        _handle_acc()
+                        _handle_acc()  # clear out the accumulator
                         use_style = resolve_style("bullet", "bullet")
                         mark = styles.get_marker("bullet", **marker_overrides)
+                        # logger.debug (f"Bullet Item: {args}")
                         fifo.append(Paragraph(args, use_style, bulletText=mark.text))  # "•"
 
                     case "bm": # change bullet marker

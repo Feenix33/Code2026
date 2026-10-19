@@ -36,9 +36,34 @@ class Marker:
     """
     Marker used by list styles.
     """
-    type: str | None = None
-    text: str | None = None
-    format: str | None = None
+    type: str | None = None         # "bullet", "numbered" - Indicates the type of bullet behavior
+    text: str | None = None         # "•", "◦", "▪", "–", "*", or None - Literal marker character
+    format: str | None = None       # "{number}.", "{number})", "{number}." with a different numbering scheme, or None - how generated numbering should appear.
+
+"""
+# Standard bullet
+Marker(type="bullet", text="•")
+
+# Secondary-level bullet
+Marker(type="bullet", text="◦")
+
+# Dash marker
+Marker(type="bullet", text="–")
+
+# Numbered list
+Marker(
+    type="numbered",
+    text=None,
+    format="{number}."
+)
+
+# Numbered list with a closing parenthesis
+Marker(
+    type="numbered",
+    text=None,
+    format="{number})"
+)
+"""
 
 
 @dataclass
@@ -128,6 +153,7 @@ class BookletStyle:
             size=8,
             color="black"
         ), 
+        space_after=10,
     ))
 
     nospace: TextStyle = field(default_factory=lambda: TextStyle(
@@ -177,10 +203,10 @@ class BookletStyle:
             text="•"
         ),
 
-        bulletfontname="Helvetica",
-        bulletfontsize=8,
-        bulletindent=10,
-        bulletcolor="black"
+        # bulletfontname="Helvetica",
+        # bulletfontsize=8,
+        # bulletindent=10,
+        # bulletcolor="black"
     ))
 
     # ---------------------------------------------------------

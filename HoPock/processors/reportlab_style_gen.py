@@ -102,7 +102,7 @@ class ReportLabStyleProvider:
         self._styles = {}
         self._overrides = {}
 
-    # NOTE: We changed get() to use dictionary for the options, see the old get() below
+    # cme NOTE: We changed get() to use dictionary for the options, see the old get() below
     # This matches the derive() function. See markdown for a test
     def get(self, name, overrides=None):
         """
