@@ -4,10 +4,21 @@ Generic utilty routines
 from datetime import datetime, date, timedelta
 import ast
 import re
+import shlex
 
 import logging
 logger = logging.getLogger(__name__)
 
+def get_first_word(text):
+  """Return the first word honoring quote marks
+  """
+  try:
+    tokens = shlex.split(text)
+    return tokens[0] if tokens else ""
+  except ValueError:
+    # Handles unmatched or unclosed quotes gracefully
+    return shlex.split(text, posix=False)[0] if text.strip() else ""
+  
 def string_to_args(arg_str):
     """Convert whitespace- or comma-separated key/value pairs to a dict."""
     if not arg_str or not arg_str.strip():

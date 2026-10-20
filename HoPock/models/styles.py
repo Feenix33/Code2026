@@ -148,11 +148,7 @@ class BookletStyle:
     # todo: do we need the font_large here? Should be able to delete I think
     body: TextStyle = field(default_factory=lambda: TextStyle(
         name="BodyStyle",
-        font=Font(
-            name="Helvetica",
-            size=8,
-            color="black"
-        ), 
+        font=Font( name="Helvetica", size=8, color="black" ), 
         space_after=10,
     ))
 
@@ -164,31 +160,29 @@ class BookletStyle:
 
     heading1: TextStyle = field(default_factory=lambda: TextStyle(
         name="HeadingStyle",
-        font=Font( name="Helvetica", size=12, color="black" ),
+        font=Font(name="Helvetica", size=12, color="blue"), 
         alignment="left", leading=14, space_after=10, space_before=0
     ))
 
     heading2: TextStyle = field(default_factory=lambda: TextStyle(
         name="HeadingStyle",
-        font=Font(
-            name="Helvetica",
-            size=11,
-            color="blue"
-        ),
+        font=Font(name="Helvetica", size=11, color="blue"), 
         alignment="left",
         leading=13,
         space_after=10,
         space_before=0
     ))
+    glossary: TextStyle = field(default_factory=lambda: TextStyle( 
+        name="BodyStyle",
+        font=Font(name="Helvetica", size=8, color="black"), 
+        space_after=0,
+        left_indent=30,
+        first_line_indent=-30
+    ))
 
     bullet: TextStyle = field(default_factory=lambda: TextStyle(
         name="BulletStyle",
-        font=Font(
-            name="Helvetica",
-            size=8,
-            color="black"
-        ),
-        alignment="left",
+        font=Font(name="Helvetica", size=8, color="black"), 
         leading=10,
         space_after=0,
         space_before=0,
@@ -249,6 +243,7 @@ class PageStyle:
     heading1: TextStyle = field(default_factory=TextStyle)
     heading2: TextStyle = field(default_factory=TextStyle)
     bullet: TextStyle = field(default_factory=TextStyle)
+    glossary: TextStyle = field(default_factory=TextStyle)
 
     margin: int | None = None
     showframe: bool | None = None

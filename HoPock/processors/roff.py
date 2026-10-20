@@ -10,7 +10,7 @@ from reportlab.platypus import Frame, Paragraph, Spacer #, PageBreak
 from reportlab.platypus import ListFlowable
 
 from processors.reportlab_style_gen import ReportLabStyleProvider
-from utility import string_to_args
+from utility import string_to_args, get_first_word
 
 import logging
 logger = logging.getLogger(__name__)
@@ -180,6 +180,14 @@ class RoffProcessor(Processor):
                         use_style = resolve_style("h2", "heading2")
                         fifo.append(Paragraph(args, use_style))
 
+                    case "defn" | "glos" | "gloss" | "dfn":
+                        _handle_acc()
+                        def_word = get_first_word(args)
+                        def_string = args[len(def_word):]
+                        new_args = "<b><i>"+def_word+"</i></b> "+def_string
+                        use_style = resolve_style("glossary", "glossary")
+                        fifo.append(Paragraph(new_args, use_style))
+
                     case "\\.": # text line starts with .L
                         logger.debug("Got the PERIOD line")
                         acc.append(line[2:])
@@ -225,7 +233,7 @@ class RoffProcessor(Processor):
                             marker_overrides = {}
                         else:
                             marker_overrides = string_to_args(args)
-                            logger.debug(f"Marker overrides = {args}")
+                            # logger.debug(f"Marker overrides = {args}")
 
                     case "be" | "ben" | "bend": # bullet list end
                         temp_style = styles.get("bullet")
@@ -242,7 +250,7 @@ class RoffProcessor(Processor):
                         # logger.debug(f"style {len(args)}: {args}")
                         style_id, _, mods = args.partition(' ')
                         style_overrides[style_id] = string_to_args(mods)
-                        logger.debug(f"{style_id} overrides are {style_overrides[style_id]}")
+                        # logger.debug(f"{style_id} overrides are {style_overrides[style_id]}")
                     case _:
                         logger.error(f"Unhandled command '{cmd}'")
             else:
