@@ -9,15 +9,29 @@ import shlex
 import logging
 logger = logging.getLogger(__name__)
 
+def split_first_word(text):
+    """Return the first shell-style token and the remaining text."""
+    match = re.match(
+        r"""\s*(?P<word>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\S+)(?P<rest>.*)""",
+        text,
+        re.DOTALL,
+    )
+    if not match:
+        return "", ""
+
+    raw_word = match.group("word")
+    try:
+        word = shlex.split(raw_word)[0]
+    except ValueError:
+        # Preserve the existing fallback for unmatched or unclosed quotes.
+        word = shlex.split(raw_word, posix=False)[0]
+
+    return word, match.group("rest").lstrip()
+
+
 def get_first_word(text):
-  """Return the first word honoring quote marks
-  """
-  try:
-    tokens = shlex.split(text)
-    return tokens[0] if tokens else ""
-  except ValueError:
-    # Handles unmatched or unclosed quotes gracefully
-    return shlex.split(text, posix=False)[0] if text.strip() else ""
+    """Return the first word honoring quote marks."""
+    return split_first_word(text)[0]
   
 def string_to_args(arg_str):
     """Convert whitespace- or comma-separated key/value pairs to a dict."""
@@ -269,4 +283,3 @@ def clean_recipe_strings(strings_list):
         processed_strings.append(text)
         
     return processed_strings
-

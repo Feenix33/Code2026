@@ -1,35 +1,47 @@
-.style h1 font.color=blue
-.h1 Dictionary
+.H1 Pocket Printer Manual
+Version 8.x
 
-.ft space.after=0 font.color=green
-.b word_in_bold
-The definition of the word
+.H2 Command Line Options
+.defn "-h, --help" Show a terse help
+.defn "-i, --input <file>" The configuration input file
+.defn "-o, --ouput <file>" Filename of the output pdf file
+.defn --manual Create a user manual
+.defn "--daily DATE" A weekly page-a-day booklet starting on Monday; can specify the date in YYYY-MMM-DD format
+.defn "--weekly DATE" A weekly booklet with some preconfigured additional pages; can specify the date
+.defn "--file FILENAME" A booklet with text pages all generated from the passed file
 
-.b word2_in_bold
-Second definition
-
-.b word3_in_bold
-Third definition
-
-.h2 Next section Heading
-
-
-.H1 Types of Pages
-# List format I usees list->li -> lend
-.list 
-.li cover
-.li daily
-.li grid
-.li lines
-.li list
-.li recipe
-.li runoff
-.li text
-.li weekly
+.H2 List of Pages
+.defn cover A simple cover sheet
+.defn lines Plain old lines
+.defn dice List of random dice rolls
+.defn list A list with checkboxes
+.defn grid Simple grid sheet
+.defn daily One day calendar page with control over hours and date
+.defn weekly Two page spread of the week starting Monday
+.defn workweek Single page to plan out the work week (Mon-Fri)
+.defn text Prints a text file without modification
+.defn score A labeled score sheet 
+.defn tracker Habit tracker for the week
+.defn trackweek Habit tracker for the month
+.defn recipe A text page that includes a special processor for recipes
+.defn runoff Text page that processes custom commands that look line nroff/troff
+.defn markdown A simplistic markdown converter (reduced command set)
+.vs
+.H2 Future
+.list bulletType="bullet"
+.li panel - Repeating panels (meal planner)
+.li image
 .lend
 
-.vs
-.H1 Cover
+
+.H2 Booket options
+.defn panels=8 How many panels in the book (8, 4, 2)
+.defn showframe=1 Show the panel frame or not (bool, default False)
+.defn data_dir=data Directory where the files are for the files command (default current directory)
+.defn addpages=True If a text page or similar exceeds a panel, should we add more pages or not (bool, default True)
+
+.H2 Cover Options
+
 A simple cover page with limited formatting commands.
 
 .H2 Commands
@@ -50,3 +62,34 @@ Trying something different
 
 .ft
 This is a simple cover page but doesn't do it all
+
+
+.style h1 font.color=blue
+.h1 Dictionary
+
+.ft space.after=0 font.color=green
+.b word_in_bold
+The definition of the word
+
+.b word2_in_bold
+Second definition
+
+.b word3_in_bold
+Third definition
+
+.h2 Next section Heading
+
+.H1 Types of Pages
+# List format I usees list->li -> lend
+# .style bullet font.color=blue
+.list bulletType="bullet"
+.li <b><i>cover</i></b> Page cover page cover page for the booklet and this is a long list item that has a bunch of words
+.li <b><i>daily</i></b> Single day calendar page with control over hours and date
+.li grid
+.li lines
+.li list
+.li recipe
+.li runoff
+.li text
+.li weekly
+.lend

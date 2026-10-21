@@ -161,7 +161,7 @@ class BookletStyle:
     heading1: TextStyle = field(default_factory=lambda: TextStyle(
         name="HeadingStyle",
         font=Font(name="Helvetica", size=12, color="blue"), 
-        alignment="left", leading=14, space_after=10, space_before=0
+        alignment="left", leading=14, space_after=10, space_before=10
     ))
 
     heading2: TextStyle = field(default_factory=lambda: TextStyle(
@@ -170,7 +170,7 @@ class BookletStyle:
         alignment="left",
         leading=13,
         space_after=10,
-        space_before=0
+        space_before=10
     ))
     glossary: TextStyle = field(default_factory=lambda: TextStyle( 
         name="BodyStyle",
@@ -186,10 +186,9 @@ class BookletStyle:
         leading=10,
         space_after=0,
         space_before=0,
-
         list_type="bullet",
-        left_indent=10,
-        first_line_indent=-10,
+        left_indent=0,
+        first_line_indent=0,
         hanging_indent=True,
 
         marker=Marker(

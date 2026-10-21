@@ -10,7 +10,7 @@ from reportlab.platypus import Frame, Paragraph, Spacer #, PageBreak
 from reportlab.platypus import ListFlowable
 
 from processors.reportlab_style_gen import ReportLabStyleProvider
-from utility import string_to_args, get_first_word
+from utility import string_to_args, split_first_word
 
 import logging
 logger = logging.getLogger(__name__)
@@ -106,10 +106,11 @@ DEFAULT_BULLET_LISTFLOW_ARGUMENTS = \
     "bulletFontName='Helvetica', "\
     "bulletFontSize=8, " \
     "bulletOffsetY=0, " \
-    "bulletDedent='auto', " \
+    "bulletDedent=8, " \
     "bulletDir='ltr', " \
     "bulletFormat=None" 
 
+    # "bulletDedent='auto', " \
 
 class RoffProcessor(Processor):
 
@@ -182,14 +183,13 @@ class RoffProcessor(Processor):
 
                     case "defn" | "glos" | "gloss" | "dfn":
                         _handle_acc()
-                        def_word = get_first_word(args)
-                        def_string = args[len(def_word):]
+                        def_word, def_string = split_first_word(args)
                         new_args = "<b><i>"+def_word+"</i></b> "+def_string
                         use_style = resolve_style("glossary", "glossary")
                         fifo.append(Paragraph(new_args, use_style))
 
                     case "\\.": # text line starts with .L
-                        logger.debug("Got the PERIOD line")
+                        # logger.debug("Got the PERIOD line")
                         acc.append(line[2:])
 
                     case "ft": # change current style
