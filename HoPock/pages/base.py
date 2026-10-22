@@ -69,7 +69,7 @@ class Page(ABC):
         try:
             # Read the file and split into a list of strings
             string_array = file_path.read_text(encoding='utf-8').splitlines()
-            logger.debug(f"Read raw text file {file_path} with {len(string_array)} lines")
+            # logger.debug(f"Read raw text file {file_path} with {len(string_array)} lines")
 
             # New behavior: group chunks by blank lines if requested
             if join_lines:

@@ -51,7 +51,7 @@ class CoverPage(Page):
 
     def draw(self, resume=False):
         detail = self.detail
-        logger.debug ("Rendering a simple cover page")
+        # logger.debug ("Rendering a simple cover page")
         xleft = self.max.x / 6
         # xright = self.max.x - xleft
         xwidth = self.max.x - 2*xleft
@@ -65,7 +65,7 @@ class CoverPage(Page):
         do_stroke=0
         if detail.titlebox: 
             self._set_line_format(self.style.line)
-            logger.debug(f"Set line style {self.style.line}")
+            # logger.debug(f"Set line style {self.style.line}")
             do_stroke=1
 
         # get the fill color
@@ -76,18 +76,18 @@ class CoverPage(Page):
             do_fill=1
 
         # debug lines
-        logger.debug(f"title={self.config.titletext}")
-        logger.debug(f"box2={self.detail.box2text}")
-        logger.debug(f"box3={self.detail.box3text}")
+        # logger.debug(f"title={self.config.titletext}")
+        # logger.debug(f"box2={self.detail.box2text}")
+        # logger.debug(f"box3={self.detail.box3text}")
 
         # draw the box
         self.canvas.rect(xleft, ybox1, xwidth, titleht, stroke=do_stroke, fill=do_fill)
 
-        # title box
+        # title box text
         self._draw_centered_lines(self.config.titletext, ytitle, self.style.title.font)
 
-        # box 2
+        # box 2 text
         self._draw_centered_lines(self.detail.box2text, ybox2, self.style.font_medium)
 
-        # box 3
+        # box 3 text
         self._draw_centered_lines(self.detail.box3text, ybox3, self.style.font)
