@@ -32,7 +32,7 @@ def test_lines_page_draws_evenly_spaced_lines_inside_margins():
 def test_lines_page_leaves_space_below_title():
     canvas = RecordingCanvas(leading=12)
     page = LinesPage(
-        PageConfig(page_type="lines", title="My Notes", detail=LinesPageDetail()),
+        PageConfig(page_type="lines", titletext="My Notes", detail=LinesPageDetail()),
         BookletStyle(),
     )
 

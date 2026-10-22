@@ -36,7 +36,7 @@ def test_render_rotates_translates_draws_frame_and_invokes_draw():
 
 def test_line_and_title_helpers_apply_style_and_return_next_y_position():
     canvas = RecordingCanvas(leading=14)
-    config = PageConfig(page_type="stub", title="Notes")
+    config = PageConfig(page_type="stub", titletext="Notes")
     page = StubPage(config, BookletStyle())
     page.canvas = canvas
     page.max = Point(100, 60)

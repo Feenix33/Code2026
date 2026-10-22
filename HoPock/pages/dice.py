@@ -66,7 +66,7 @@ class DicePage(Page):
             dice_string = self.detail.dice
         nroll, ndie = self._parse_dice(dice_string)
 
-        titletext = self.config.title
+        titletext = self.config.titletext
         if not titletext:
             titletext = f"Dice Sheet {nroll}d{ndie}"
         ypos = self._draw_title(title_str=titletext) - lineht

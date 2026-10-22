@@ -51,8 +51,8 @@ class TextPage(Page):
                 self.config.text = self._read_file(self.config.file, self.detail.joinlines)
                 # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
 
-            if self.config.title:
-                self.config.text.insert(0, self.config.title)
+            if self.config.titletext:
+                self.config.text.insert(0, self.config.titletext)
         
             #
             # process the text buffer into RL objects

@@ -32,7 +32,7 @@ class ScorePage(Page):
         self._set_font(self.style.font_medium)
         lineht = self.leading
 
-        if self.config.title:
+        if self.config.titletext:
             ypos = self._draw_title() - lineht
         else:
             ypos = self.max.y - lineht*1.5

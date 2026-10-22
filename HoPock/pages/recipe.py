@@ -46,8 +46,8 @@ class RecipePage(Page):
                 # self.config.text = self.processor._read_file(self.config.file)
                 self.config.text = self._read_file(self.config.file)
                 # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
-                if self.config.title:
-                    self.config.text.insert(0, self.config.title)
+                if self.config.titletext:
+                    self.config.text.insert(0, self.config.titletext)
             else:
                 logger.warn ("There is no file")
 
@@ -56,7 +56,7 @@ class RecipePage(Page):
             #
             # process the text buffer into RL objects
             #
-            first_line = self.detail.firstline or (self.config.title and len(self.config.title) > 0) # check if there is a firstline
+            first_line = self.detail.firstline or (self.config.titletext and len(self.config.titletext) > 0) # check if there is a firstline
             self.processed_lines = self.processor.process(self.config.text, self.style_provider, #self.rl_styles,
                                                           first_line=first_line, 
                                                           blanks=self.detail.blanks,

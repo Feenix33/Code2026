@@ -44,7 +44,7 @@ class MarkdownPage(Page):
         
             # process the text buffer into RL objects
             self.processed_lines = self.processor.process(self.config.text, self.style_provider,
-                                                          titletext=self.config.title)
+                                                          titletext=self.config.titletext)
 
         # entry point to add to frame, start here on resume
         while self.processed_lines:

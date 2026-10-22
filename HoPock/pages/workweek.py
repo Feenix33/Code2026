@@ -34,7 +34,7 @@ class WorkWeekPage(Page):
         ypos = self.max.y - (self.leading * 1.5)
 
         # get the title text fmt, date
-        titlefmt = self.config.title
+        titlefmt = self.config.titletext
         if titlefmt:
             tl, tc, tr = header_lcr(titlefmt, monday_date)
             #for tt in [tl, tc, tr]:

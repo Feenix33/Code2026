@@ -44,7 +44,7 @@ class RoffPage(Page):
         
             # process the text buffer into RL objects
             self.processed_lines = self.processor.process(text=self.config.text, styles=self.style_provider,
-                                                          titletext=self.config.title)
+                                                          titletext=self.config.titletext)
 
         # entry point to add to frame, start here on resume
         while self.processed_lines:

@@ -74,11 +74,17 @@ class CoverPage(Page):
             self.canvas.setFillColor(detail.titlefill)
             logger.debug(f"Fill {detail.titlefill}")
             do_fill=1
+
+        # debug lines
+        logger.debug(f"title={self.config.titletext}")
+        logger.debug(f"box2={self.detail.box2text}")
+        logger.debug(f"box3={self.detail.box3text}")
+
         # draw the box
         self.canvas.rect(xleft, ybox1, xwidth, titleht, stroke=do_stroke, fill=do_fill)
 
         # title box
-        self._draw_centered_lines(self.config.title, ytitle, self.style.title.font)
+        self._draw_centered_lines(self.config.titletext, ytitle, self.style.title.font)
 
         # box 2
         self._draw_centered_lines(self.detail.box2text, ybox2, self.style.font_medium)

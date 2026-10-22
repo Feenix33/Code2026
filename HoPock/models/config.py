@@ -14,7 +14,7 @@ class PageConfig:
     page_type: str
     style: PageStyle | None = None  # common style itmes
     detail: object | None = None # extended items for each page
-    title: str = None # page title
+    titletext: str = None # page title
     file: str | Path | None = None
     text: list[str] = field(default_factory=list) # array of text to print
     # data_dir: str | None = None  # directory for data files - Added to simplify visibility to page class
