@@ -78,7 +78,7 @@ class CoverPage(Page):
         self.canvas.rect(xleft, ybox1, xwidth, titleht, stroke=do_stroke, fill=do_fill)
 
         # title box
-        self._draw_centered_lines(self.config.titletext, ytitle, self.style.title.font)
+        self._draw_centered_lines(self.config.title, ytitle, self.style.title.font)
 
         # box 2
         self._draw_centered_lines(self.detail.box2text, ybox2, self.style.font_medium)

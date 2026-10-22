@@ -37,7 +37,7 @@ class ListPage(Page):
             self._set_font(use_font)
             self.spacing = int(self.leading)
 
-        if self.config.titletext:
+        if self.config.title:
             ypos = self._draw_title() - self.spacing
         else:
             ypos = self.max.y - self.spacing*2

@@ -136,7 +136,7 @@ class Page(ABC):
         self._set_font_title()
         x = self.mid.x
         y = ypos if ypos is not None else self.max.y - self.leading
-        title = title_str if title_str is not None else self.config.titletext
+        title = title_str if title_str is not None else self.config.title
         if title:
             self.canvas.drawCentredString(x, y, title)
             y -= self.leading
@@ -228,5 +228,5 @@ class BlankPage(Page):
 
     def draw(self, resume=False):
         ypos = None
-        if self.config.titletext:
+        if self.config.title:
             ypos = self._draw_title()

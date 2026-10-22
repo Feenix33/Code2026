@@ -28,7 +28,7 @@ class GridPage(Page):
     
 
     def draw(self, resume=False):
-        if self.config.titletext:
+        if self.config.title:
             ypos = self._draw_title() #- self.grid.y
         else:
             ypos = self.max.y - self.grid.y

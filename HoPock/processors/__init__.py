@@ -1,5 +1,5 @@
 """Processor implementations package."""
 
-from .plain import SimpleTextProcessor
+from .simple import SimpleTextProcessor
 
 __all__ = ["SimpleTextProcessor"]

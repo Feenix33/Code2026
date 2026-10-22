@@ -4,7 +4,7 @@ Pages based on text page need a processor for content handline
 """
 from pages.base import Page
 from pages.factory import PageFactory
-from processors.plain import SimpleTextProcessor
+from processors.simple import SimpleTextProcessor
 from processors.reportlab_style_gen import ReportLabStyleProvider
 from utility import clean_recipe_strings
 
@@ -46,18 +46,19 @@ class RecipePage(Page):
                 # self.config.text = self.processor._read_file(self.config.file)
                 self.config.text = self._read_file(self.config.file)
                 # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
-                if self.config.titletext:
-                    self.config.text.insert(0, self.config.titletext)
+                if self.config.title:
+                    self.config.text.insert(0, self.config.title)
             else:
-                logger.debug ("There is no file")
+                logger.warn ("There is no file")
 
             if self.detail.clean:
                 self.config.text = clean_recipe_strings(self.config.text)
             #
             # process the text buffer into RL objects
             #
+            first_line = self.detail.firstline or (self.config.title and len(self.config.title) > 0) # check if there is a firstline
             self.processed_lines = self.processor.process(self.config.text, self.style_provider, #self.rl_styles,
-                                                          first_line=self.detail.firstline, 
+                                                          first_line=first_line, 
                                                           blanks=self.detail.blanks,
                                                           title_style_name=self.detail.title_style, 
                                                           body_style_name=self.detail.body_style)

@@ -24,7 +24,7 @@ class TrackMonthPage(Page):
     def _init_layout(self):
         """Initializes shared configurations, fonts, and sets up baseline tracking variables."""
         lineht = self.leading
-        if self.config.titletext:
+        if self.config.title:
             ypos = self._draw_title()
             ypos -= lineht
         else:

@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 import re
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class DefinitionEntry:
     page_type: str
@@ -80,6 +83,7 @@ class DefinitionParser:
             if not line or line.startswith("#"):
                 continue
 
+            # logger.debug (f"Parsing {line}")
             entry = self._parse_entry(line, lines)
 
             if entry is not None:

@@ -4,7 +4,7 @@ Pages based on text page need a processor for content handline
 """
 from pages.base import Page
 from pages.factory import PageFactory
-from processors.plain import SimpleTextProcessor
+from processors.simple import SimpleTextProcessor
 from processors.reportlab_style_gen import ReportLabStyleProvider
 from models.page_details import TextPageDetail
 from reportlab.platypus import Frame, Paragraph, Spacer #, PageBreak
@@ -51,8 +51,8 @@ class TextPage(Page):
                 self.config.text = self._read_file(self.config.file, self.detail.joinlines)
                 # logger.debug(f"Read {len(self.config.text)} lines from file {self.config.file}")
 
-            if self.config.titletext:
-                self.config.text.insert(0, self.config.titletext)
+            if self.config.title:
+                self.config.text.insert(0, self.config.title)
         
             #
             # process the text buffer into RL objects

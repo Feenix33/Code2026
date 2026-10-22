@@ -223,7 +223,8 @@ def clean_recipe_strings(strings_list):
         "¾": "3/4",
         "⅓": "1/3",
         "⅔": "2/3",
-        "°": ""
+        "°": "",
+        "😏": "",
     }
     
     # 2. Measurement Unit Mappings to standard abbreviations
