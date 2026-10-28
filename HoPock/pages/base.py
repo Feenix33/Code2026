@@ -165,14 +165,14 @@ class Page(ABC):
         if day is None:
             if today is not None:
                 today = parse_mystery_date_string(today)
-            logger.debug(f"Override date {today}")
+            # logger.debug(f"Override date {today}")
 
         title = title_str if title_str is not None else self.config.titletext
         title_format = title_fmt
         if title_fmt is None:
             title_format = self.config.titleformat
 
-        logger.debug(f"title:{title} fmt:{title_format}")
+        # logger.debug(f"title:{title} fmt:{title_format}")
 
         if title_format is None:
             if title:
@@ -243,6 +243,4 @@ class BlankPage(Page):
         super().__init__(config, booklet_style)
 
     def draw(self, resume=False):
-        ypos = None
-        if self.config.titletext:
-            ypos = self._draw_title()
+        ypos = self._draw_title()

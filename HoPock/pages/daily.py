@@ -25,7 +25,6 @@ class DailyPage(Page):
     def draw(self, resume=False):
 
         detail = self.config.detail
-        logger.debug ("Rendering a daily")
 
         # what day are we on
         thisday = None
@@ -43,7 +42,7 @@ class DailyPage(Page):
         #         logger.debug (f"Text is {tt}")
 
         y = self._draw_title_lrc([tl,tc,tr]) # No y means it computes from font size and dim
-        logger.debug(f"{self.detail}")
+        logger.debug(f"Daily detail: [{self.detail}]")
         start_time = datetime.strptime(detail.start, "%H:%M")
         end_time = datetime.strptime(detail.end, "%H:%M")
         current_minutes = start_time.hour * 60 + start_time.minute

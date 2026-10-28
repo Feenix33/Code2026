@@ -23,10 +23,7 @@ class TrackWeekPage(Page):
 
     def _init_layout(self):
         """Initializes shared configurations, fonts, and sets up baseline tracking variables."""
-        if self.config.titletext:
-            ypos = self._draw_title()
-        else:
-            ypos = self.max.y
+        ypos = self._draw_title()
 
         self._set_Line_format_default()
         self._set_font(self.style.font_large)

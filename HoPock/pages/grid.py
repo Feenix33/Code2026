@@ -28,10 +28,7 @@ class GridPage(Page):
     
 
     def draw(self, resume=False):
-        if self.config.titletext:
-            ypos = self._draw_title() #- self.grid.y
-        else:
-            ypos = self.max.y - self.grid.y
+        ypos = self._draw_title() #- self.grid.y
 
         # set the line style
         self._set_Line_format_default()

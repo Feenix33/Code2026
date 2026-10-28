@@ -32,13 +32,7 @@ class ScorePage(Page):
         self._set_font(self.style.font_medium)
         lineht = self.leading
 
-        if self.config.titletext:
-            ypos = self._draw_title() - lineht
-        else:
-            ypos = self.max.y - lineht*1.5
-
-        
-        # ypos -= lineht * 1.0
+        ypos = self._draw_title() - lineht
 
         # Build shared label list
         label_list = []
