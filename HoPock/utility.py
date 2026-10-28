@@ -57,7 +57,7 @@ def string_to_args(arg_str):
 
 
 
-def header_lcr(format_string="\t{dd}{mmm}", header_date=None):
+def header_lcr(format_string="\t{dd}{mmm}", header_date=None, string_value=None):
     """
     Format a header string into left, center, and right sections.
 
@@ -96,6 +96,8 @@ def header_lcr(format_string="\t{dd}{mmm}", header_date=None):
         6: "U",  # Sunday
     }
 
+    replace_s = "" if string_value is None else string_value
+
     values = {
         "d": str(header_date.day),
         "dd": f"{header_date.day:02d}",
@@ -111,6 +113,7 @@ def header_lcr(format_string="\t{dd}{mmm}", header_date=None):
         "yyyy": header_date.strftime("%Y"),
 
         "dw": day_letters[header_date.weekday()],
+        "s": replace_s,
     }
 
     # Replace date fields.

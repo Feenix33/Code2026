@@ -38,9 +38,9 @@ class DailyPage(Page):
         # get the title text fmt, date
         titlefmt = detail.dayformat
         tl, tc, tr = header_lcr(titlefmt, thisday)
-        for tt in [tl, tc, tr]:
-            if len(tt) > 0:
-                logger.debug (f"Text is {tt}")
+        # for tt in [tl, tc, tr]:
+        #     if len(tt) > 0:
+        #         logger.debug (f"Text is {tt}")
 
         y = self._draw_title_lrc([tl,tc,tr]) # No y means it computes from font size and dim
         logger.debug(f"{self.detail}")

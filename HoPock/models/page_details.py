@@ -11,9 +11,9 @@ class CalendarPageDetail:
 class CoverPageDetail:
     box2text: str = None    # Text for box 2
     box3text: str = None    # Text for box 3
-    titleyper: float = 0.875 # y percent pos of title 7/8
-    box2yper: float = 0.5  # y percent pos of title 1/2
-    box3yper: float = 0.25  # y percent pos of box3 1/4
+    title_yper: float = 0.875 # y percent pos of title 7/8
+    box2_yper: float = 0.5  # y percent pos of title 1/2
+    box3_yper: float = 0.25  # y percent pos of box3 1/4
     titleht: float = 0.25    # y percent of title box size
     titlefill: str = None   # fill color
     titlebox: bool = True   # draw the box around the title
@@ -48,7 +48,7 @@ class ListPageDetail:
     number: int = 0             # max number of items 0 = infinite
     checkbox: str = 'x'         # x=boxes o=circles
     drawlines: bool = True      # draw lines or not
-    mylist: list[str] = field(default_factory=list)
+    mylist: list[str] = field(default_factory=list)  # eg mylist="['bread', 'milk']"
 
 @dataclass
 class MarkdownPageDetail:
@@ -57,6 +57,7 @@ class MarkdownPageDetail:
 @dataclass
 class RecipePageDetail:
     blanks: bool = True             # if a line is blank, add a blank line between lines
+    period: bool = False            # NOT IMPLEMENTED if true put a line break when a period is encountered
     firstline: bool = False         # if true, then the first line is a title
     clean: bool = True              # Process through the cleaner
     spacer: bool = False            # put space between lines

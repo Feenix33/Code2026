@@ -7,6 +7,7 @@ from models.resolver import resolve_page_style
 # from models.reportlab_styles import *
 from pages.factory import PageFactory
 from processors.reportlab_style_gen import ReportLabStyleProvider
+from utility import header_lcr, parse_mystery_date_string
 
 import logging
 logger = logging.getLogger(__name__)
@@ -51,20 +52,6 @@ class Page(ABC):
     def _render_end(self):
         self.canvas.restoreState()
 
-    def OLD_read_file(self, file_path): # ususually store in config.text
-        try:
-            # Read the file and split into a list of strings
-            string_array = file_path.read_text(encoding='utf-8').splitlines()
-            logger.debug(f"Read raw text file {file_path} with {len(string_array)} lines")
-
-        except FileNotFoundError:
-            # print(f"Error: The file '{file_path}' does not exist.")
-            logger.error (f"Error: The file '{file_path}' does not exist.")
-            # Initialize an empty list or handle the fallback here
-            string_array = []
-
-        return string_array
- 
     def _read_file(self, file_path, join_lines=False): # usually store in config.text
         try:
             # Read the file and split into a list of strings
@@ -131,7 +118,7 @@ class Page(ABC):
         font = self.style.title.font
         self._set_font(font)
 
-    def _draw_title(self, title_str=None, ypos=None):
+    def OLD_draw_title(self, title_str=None, ypos=None):
         self.canvas.saveState()
         self._set_font_title()
         x = self.mid.x
@@ -167,6 +154,35 @@ class Page(ABC):
         self.canvas.restoreState()
         return y
 
+    def _draw_title(self, title_str=None, title_fmt=None, ypos=None, xleft=None, xright=None, use_title_font=True, day=None):
+        self.canvas.saveState()
+        if use_title_font:
+            self._set_font_title()
+
+        x = self.mid.x
+        y = ypos if ypos is not None else self.max.y - self.leading
+        today = day if day is not None else self.config.today
+        if day is None:
+            if today is not None:
+                today = parse_mystery_date_string(today)
+            logger.debug(f"Override date {today}")
+
+        title = title_str if title_str is not None else self.config.titletext
+        title_format = title_fmt
+        if title_fmt is None:
+            title_format = self.config.titleformat
+
+        logger.debug(f"title:{title} fmt:{title_format}")
+
+        if title_format is None:
+            if title:
+                self.canvas.drawCentredString(x, y, title)
+        else:
+            tl, tc, tr = header_lcr(title_format, today, title)
+            # logger.debug(f"titles[{tl} - {tc} - {tr}]")
+            y = self._draw_title_lrc([tl,tc,tr], ypos=y, xleft=xleft, xright=xright, use_title_font=use_title_font)
+        self.canvas.restoreState()
+        return y
 
     # =======================================================
     # Drawing routines

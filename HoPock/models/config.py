@@ -15,8 +15,11 @@ class PageConfig:
     style: PageStyle | None = None  # common style itmes
     detail: object | None = None # extended items for each page
     titletext: str = None # page title
+    titleformat: str = None # format string for title
     file: str | Path | None = None
     text: list[str] = field(default_factory=list) # array of text to print
+    today: str = None         # today's date
+
     # data_dir: str | None = None  # directory for data files - Added to simplify visibility to page class
 
  
