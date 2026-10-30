@@ -155,6 +155,10 @@ class Page(ABC):
         return y
 
     def _draw_title(self, title_str=None, title_fmt=None, ypos=None, xleft=None, xright=None, use_title_font=True, day=None):
+        """
+        This draw title will do the LRC title if a title_fmt is passed
+        Will put title-str in the center if no title-fmt
+        """
         self.canvas.saveState()
         if use_title_font:
             self._set_font_title()

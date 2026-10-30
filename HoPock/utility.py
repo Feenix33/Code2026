@@ -137,7 +137,94 @@ def header_lcr(format_string="\t{dd}{mmm}", header_date=None, string_value=None)
     # second = center, everything after = right.
     return parts[0], parts[1], "\t".join(parts[2:])
 
-def parse_mystery_date_string(date_str: str) -> date:
+
+
+
+def parse_mystery_date_string(
+    date_str: str,
+    base_date: date = None
+) -> date:
+    """
+    Converts a date string into a datetime.date object.
+
+    Absolute formats:
+    - yyyy-mm-dd
+    - mm/dd
+    - mm/dd/yyyy
+    - dd-mmm-yy
+    - dd-mmm-yyyy
+    - mm-dd-yyyy
+    - ddmmm
+
+    Relative formats:
+    - 1, +1, -2       (days)
+    - +3d, -3d        (days)
+    - 1w, -1w         (weeks)
+    - +d, -d          (one day)
+
+    Relative dates are calculated from base_date.
+    If base_date is omitted, today's date is used.
+    """
+
+    date_str = date_str.strip().lower()
+
+    # Default starting date
+    if base_date is None:
+        base_date = date.today()
+
+    # --------------------------------------------------
+    # Check for relative dates
+    # --------------------------------------------------
+
+    match = re.fullmatch(r'([+-]?\d*)([dw]?)', date_str)
+
+    if match:
+        amount_str, unit = match.groups()
+
+        if amount_str or unit:
+
+            amount = int(amount_str) if amount_str not in ('', '+', '-') else 1
+
+            if amount_str == '-':
+                amount = -1
+
+            if unit == 'w':
+                amount *= 7
+
+            return base_date + timedelta(days=amount)
+
+    # --------------------------------------------------
+    # Check for absolute date formats
+    # --------------------------------------------------
+
+    formats = [
+        "%Y-%m-%d",
+        "%m/%d",
+        "%m/%d/%Y",
+        "%d-%b-%y",
+        "%d-%b-%Y",
+        "%m-%d-%Y",
+        "%d%b"
+    ]
+
+    for fmt in formats:
+        try:
+            parsed_date = datetime.strptime(date_str, fmt).date()
+
+            # Formats without a year default to the base year
+            if fmt in ("%m/%d", "%d%b"):
+                parsed_date = parsed_date.replace(year=base_date.year)
+
+            return parsed_date
+
+        except ValueError:
+            continue
+
+    raise ValueError(
+        f"Date string '{date_str}' does not match any expected formats."
+    )
+
+def OLDparse_mystery_date_string(date_str: str) -> date:
     """
     Converts a date string in various formats into a datetime.date object.
     Supported formats:
